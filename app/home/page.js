@@ -1,27 +1,22 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { User, BarChart3, TrendingUp, TrendingDown, LogOut, Menu, X } from 'lucide-react';
+import DashboardLayout from '../screens/DashboardLayout';
+import IncomeLayout from '../screens/IncomeLayout';
+import ExpenseLayout from '../screens/ExpenseLayout'; 
 
 const Dashboard = () => {
   return (
     <div className="p-4 md:p-8">
-      <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">Dashboard</h1>
-      <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
-        <p className="text-gray-600">Dashboard component will be loaded here.</p>
-        <p className="text-sm text-gray-500 mt-2">Replace this with your dashboard.js component</p>
+        <DashboardLayout/>
       </div>
-    </div>
   );
 };
 
 const Income = () => {
   return (
     <div className="p-4 md:p-8">
-      <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">Income</h1>
-      <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
-        <p className="text-gray-600">Income component will be loaded here.</p>
-        <p className="text-sm text-gray-500 mt-2">Replace this with your income.js component</p>
-      </div>
+        <IncomeLayout/>
     </div>
   );
 };
@@ -29,11 +24,7 @@ const Income = () => {
 const Expense = () => {
   return (
     <div className="p-4 md:p-8">
-      <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">Expenses</h1>
-      <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
-        <p className="text-gray-600">Expense component will be loaded here.</p>
-        <p className="text-sm text-gray-500 mt-2">Replace this with your expense.js component</p>
-      </div>
+        <ExpenseLayout/>
     </div>
   );
 };
@@ -105,7 +96,7 @@ function Home() {
 
       {/* Sidebar */}
       <div className={`
-        sidebar fixed lg:static lg:translate-x-0 
+        sidebar fixed h-screen lg:static lg:translate-x-0 
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         transition-transform duration-300 ease-in-out
         w-64 h-full bg-white shadow-lg z-50 lg:z-auto
@@ -119,7 +110,6 @@ function Home() {
             </div>
             <div className="min-w-0 flex-1">
               <h3 className="font-semibold text-gray-800 text-sm md:text-base truncate">John Doe</h3>
-              <p className="text-xs md:text-sm text-gray-500 truncate">john.doe@email.com</p>
             </div>
           </div>
         </div>
