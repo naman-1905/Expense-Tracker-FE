@@ -2,10 +2,10 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME      = "halfskirmish_tracker"
+        IMAGE_NAME      = "halfskirmish_expenses"
         TAG             = "latest"
         REGISTRY        = "10.243.4.236:5000"
-        DEPLOYMENT_NAME = "halfskirmish-tracker"
+        DEPLOYMENT_NAME = "halfskirmish-expenses"
         DOCKER_HOST     = "tcp://10.243.52.185:2375"
         APP_NETWORK     = "app"
     }
