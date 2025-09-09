@@ -122,7 +122,7 @@ function Home() {
                 onClick={() => handleNavClick('dashboard')}
                 className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-lg text-left transition-colors ${
                   activeSection === 'dashboard'
-                    ? 'bg-blue-100 text-blue-700 border-r-4 border-blue-700'
+                    ? 'bg-blue-100 text-blue-700 border-r-4 font-bold border-blue-700'
                     : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
