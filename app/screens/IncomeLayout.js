@@ -4,13 +4,9 @@ import IncomeSourcesCard from '../cards/IncomeSourcesCard'
 
 function IncomeLayout() {
   return (
-    <div className="flex gap-4 text-black">
-      <div className="flex-1">
-        <IncomeChartCard />
-      </div>
-      <div className="flex-1">
-        <IncomeSourcesCard />
-      </div>
+    <div className="flex flex-col gap-6 text-black">
+      <IncomeChartCard />
+      <IncomeSourcesCard />
     </div>
   )
 }
