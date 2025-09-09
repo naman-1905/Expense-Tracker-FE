@@ -146,7 +146,7 @@ const ExpenseChartCard = () => {
           </div>
           <button
             onClick={handleAddExpense}
-            className="bg-red-600/60 hover:bg-red-600 cursor-pointer text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2 shadow-sm"
+            className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2 shadow-sm"
           >
             <span className="text-lg">+</span>
             Add Expense
