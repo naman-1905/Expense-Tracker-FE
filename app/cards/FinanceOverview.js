@@ -174,7 +174,7 @@ function FinanceOverview() {
   }, [financialData.income, financialData.expenses, financialData.balance]);
 
   return (
-    <div className="bg-white rounded-3xl shadow-md p-8 border border-gray-100/50 backdrop-blur-sm">
+    <div className="bg-white rounded-xl shadow-md p-8 border border-gray-100/50 backdrop-blur-sm">
       {/* Header */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-800 mb-2">
