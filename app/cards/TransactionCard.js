@@ -70,13 +70,10 @@ const TransactionCard = () => {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow duration-300">
+    <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 transition-shadow duration-300">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-gray-800">Recent Transactions</h2>
-        <button className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors duration-200">
-          See all
-        </button>
+        <h2 className="text-2xl font-bold text-gray-800">Recent Transactions</h2>
       </div>
 
       {/* Transaction List */}
