@@ -41,7 +41,7 @@ function FinanceOverview() {
     chartInstance.current = new Chart(ctx, {
       type: 'doughnut',
       data: {
-        labels: ['Income', 'Expenses', 'Balance'], // keep labels internally
+        labels: ['Income', 'Expenses', 'Balance'],
         datasets: [
           {
             data: [
@@ -63,24 +63,81 @@ function FinanceOverview() {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { display: false }, // hide legend completely
+          legend: { display: false },
           tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            titleColor: '#374151',
-            bodyColor: '#6B7280',
-            borderColor: '#E5E7EB',
+            enabled: true,
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            titleColor: '#ffffff',
+            bodyColor: '#ffffff',
+            borderColor: 'rgba(255, 255, 255, 0.2)',
             borderWidth: 1,
-            cornerRadius: 12,
-            displayColors: false,
-            padding: 12,
-            titleFont: { size: 14, weight: '600' },
-            bodyFont: { size: 13, weight: '500' },
+            cornerRadius: 8,
+            displayColors: true,
+            padding: 16,
+            titleFont: { size: 16, weight: '600' },
+            bodyFont: { size: 14, weight: '500' },
+            titleAlign: 'center',
+            bodyAlign: 'center',
+            caretSize: 8,
+            caretPadding: 15,
+            usePointStyle: true,
+            boxWidth: 12,
+            boxHeight: 12,
+            boxPadding: 8,
             callbacks: {
-              label: function (context) {
-                const label = context.label; // "Income", "Expenses", "Balance"
-                const value = context.parsed;
-                return `${label}: ${formatCurrency(value)}`;
+              title: function(context) {
+                return context[0].label;
               },
+              label: function (context) {
+                const value = context.parsed;
+                return formatCurrency(value);
+              },
+              labelColor: function(context) {
+                const colors = ['#10B981', '#EF4444', '#3B82F6'];
+                return {
+                  borderColor: colors[context.dataIndex],
+                  backgroundColor: colors[context.dataIndex],
+                  borderWidth: 0,
+                  borderRadius: 6,
+                };
+              },
+            },
+            animation: {
+              duration: 200,
+            },
+            position: 'average',
+            external: function(context) {
+              // Get tooltip, chart, and canvas references
+              const {chart, tooltip} = context;
+              const canvas = chart.canvas;
+              
+              if (tooltip.opacity === 0) return;
+              
+              // Get the center of the chart
+              const centerX = chart.width / 2;
+              const centerY = chart.height / 2;
+              
+              // Get the tooltip position relative to the center
+              const tooltipX = tooltip.caretX;
+              const tooltipY = tooltip.caretY;
+              
+              // Calculate the direction from center to hover point
+              const deltaX = tooltipX - centerX;
+              const deltaY = tooltipY - centerY;
+              
+              // Calculate the distance and normalize
+              const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+              const normalizedX = deltaX / distance;
+              const normalizedY = deltaY / distance;
+              
+              // Position tooltip outside the circle (radius ~140px, tooltip offset ~180px)
+              const offset = 180;
+              const newX = centerX + normalizedX * offset;
+              const newY = centerY + normalizedY * offset;
+              
+              // Update tooltip position
+              tooltip.x = newX;
+              tooltip.y = newY;
             },
           },
         },
@@ -91,9 +148,23 @@ function FinanceOverview() {
           easing: 'easeOutCubic',
         },
         elements: {
-          arc: { borderWidth: 0, hoverBorderWidth: 0 },
+          arc: { 
+            borderWidth: 0, 
+            hoverBorderWidth: 3,
+            hoverBorderColor: 'rgba(255, 255, 255, 0.8)',
+          },
         },
-        interaction: { intersect: false },
+        interaction: { 
+          intersect: false,
+          mode: 'point'
+        },
+        onHover: (event, activeElements) => {
+          if (activeElements.length > 0) {
+            event.native.target.style.cursor = 'pointer';
+          } else {
+            event.native.target.style.cursor = 'default';
+          }
+        },
       },
     });
 
@@ -118,7 +189,7 @@ function FinanceOverview() {
           <canvas ref={chartRef} className="absolute inset-0"></canvas>
 
           {/* Center Content */}
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="text-center">
               <p className="text-sm font-medium text-gray-500 mb-1">
                 Net Worth
@@ -131,8 +202,26 @@ function FinanceOverview() {
         </div>
       </div>
 
+      {/* Legend */}
+      <div className="flex justify-center mb-8">
+        <div className="flex space-x-8">
+          <div className="flex items-center">
+            <div className="w-4 h-4 rounded-full bg-gradient-to-r from-green-500 to-green-600 mr-3"></div>
+            <span className="text-sm font-medium text-gray-700">Income</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-4 h-4 rounded-full bg-gradient-to-r from-red-500 to-red-600 mr-3"></div>
+            <span className="text-sm font-medium text-gray-700">Expenses</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-4 h-4 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 mr-3"></div>
+            <span className="text-sm font-medium text-gray-700">Balance</span>
+          </div>
+        </div>
+      </div>
+
       {/* Quick Stats */}
-      <div className="mt-8 pt-6 border-t border-gray-200/50">
+      <div className="pt-6 border-t border-gray-200/50">
         <div className="grid grid-cols-2 gap-6">
           <div className="text-center p-4 rounded-2xl bg-gradient-to-br from-green-50 to-green-100/50">
             <p className="text-sm font-medium text-green-600/80 mb-1">
