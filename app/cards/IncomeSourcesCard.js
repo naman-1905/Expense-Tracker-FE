@@ -115,7 +115,7 @@ const IncomeSourcesCard = () => {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100 transition-shadow duration-300">
+    <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 transition-shadow duration-300">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800">Income Sources</h2>

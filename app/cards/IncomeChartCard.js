@@ -156,7 +156,7 @@ const IncomeChartCard = () => {
 
   return (
     <>
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 max-w-4xl mx-auto">
+      <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 transition-shadow duration-300">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
