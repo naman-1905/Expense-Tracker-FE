@@ -96,14 +96,14 @@ function Home() {
 
       {/* Sidebar */}
       <div className={`
-        sidebar fixed h-screen lg:static lg:translate-x-0 
+         sidebar fixed top-0 left-0 h-screen lg:static lg:h-auto lg:translate-x-0 
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         transition-transform duration-300 ease-in-out
         w-64 h-full bg-white shadow-lg z-50 lg:z-auto
         flex flex-col
       `}>
         {/* Profile Section */}
-        <div className="p-4 md:p-6 border-b border-gray-200 mt-16 lg:mt-0">
+        <div className="p-4 md:p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
               <User className="w-5 h-5 md:w-6 md:h-6 text-white" />
