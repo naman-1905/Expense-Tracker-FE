@@ -1,16 +1,52 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Chart from 'chart.js/auto';
+import { Loader } from 'lucide-react';
 
 function FinanceOverview() {
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [financialData, setFinancialData] = useState({
+    income: 0,
+    expenses: 0,
+    balance: 0,
+  });
 
-  // Sample data - replace with your actual data
-  const financialData = {
-    income: 23750,
-    expenses: 8320,
-    balance: 15430,
+  const fetchFinancialData = async () => {
+    try {
+      const userData = JSON.parse(localStorage.getItem('expense_tracker_user_data'));
+      if (!userData?.id) {
+        throw new Error('User not authenticated');
+      }
+
+      const [balanceRes, incomeRes, expensesRes] = await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_HISTORY_API}/api/history/balance?user_id=${userData.id}`),
+        fetch(`${process.env.NEXT_PUBLIC_HISTORY_API}/api/history/income?user_id=${userData.id}`),
+        fetch(`${process.env.NEXT_PUBLIC_HISTORY_API}/api/history/expenses?user_id=${userData.id}`)
+      ]);
+
+      const [balance, income, expenses] = await Promise.all([
+        balanceRes.json(),
+        incomeRes.json(),
+        expensesRes.json()
+      ]);
+
+      setFinancialData({
+        income: income.total_income || 0,
+        expenses: expenses.total_expenses || 0,
+        balance: balance.balance || 0,
+      });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchFinancialData();
+  }, []);
 
   const formatCurrency = (value) =>
     new Intl.NumberFormat('en-US', {
@@ -21,6 +57,8 @@ function FinanceOverview() {
     }).format(value);
 
   useEffect(() => {
+    if (loading) return;
+
     const ctx = chartRef.current.getContext('2d');
 
     if (chartInstance.current) {
@@ -45,17 +83,18 @@ function FinanceOverview() {
         datasets: [
           {
             data: [
-              financialData.income,
-              financialData.expenses,
-              financialData.balance,
+              financialData.income || 0.01, // ensure minimum value
+              financialData.expenses || 0.01,
+              financialData.balance || 0.01,
             ],
             backgroundColor: [incomeGradient, expensesGradient, balanceGradient],
-            borderWidth: 0,
+            borderWidth: 1,
+            borderColor: ['rgba(16, 185, 129, 0.2)', 'rgba(239, 68, 68, 0.2)', 'rgba(59, 130, 246, 0.2)'],
             cutout: '70%',
             spacing: 4,
             borderRadius: 8,
-            hoverBorderWidth: 0,
-            hoverBorderColor: 'transparent',
+            hoverBorderWidth: 3,
+            hoverBorderColor: 'rgba(255, 255, 255, 0.8)',
           },
         ],
       },
@@ -171,7 +210,23 @@ function FinanceOverview() {
     return () => {
       chartInstance.current?.destroy();
     };
-  }, [financialData.income, financialData.expenses, financialData.balance]);
+  }, [loading, financialData.income, financialData.expenses, financialData.balance]);
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl shadow-md p-8 border border-gray-100/50 backdrop-blur-sm min-h-[600px] flex items-center justify-center">
+        <Loader className="w-8 h-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl shadow-md p-8 border border-gray-100/50 backdrop-blur-sm">
+        <div className="text-center text-red-600">Error: {error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-xl shadow-md p-8 border border-gray-100/50 backdrop-blur-sm">
@@ -228,8 +283,7 @@ function FinanceOverview() {
               Savings Rate
             </p>
             <p className="text-xl font-bold text-green-700">
-              {((financialData.balance / financialData.income) * 100).toFixed(1)}
-              %
+              {financialData.income ? ((financialData.balance / financialData.income) * 100).toFixed(1) : "0"}%
             </p>
           </div>
           <div className="text-center p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100/50">
@@ -237,10 +291,7 @@ function FinanceOverview() {
               Expense Ratio
             </p>
             <p className="text-xl font-bold text-blue-700">
-              {((financialData.expenses / financialData.income) * 100).toFixed(
-                1
-              )}
-              %
+              {financialData.income ? ((financialData.expenses / financialData.income) * 100).toFixed(1) : "0"}%
             </p>
           </div>
         </div>
