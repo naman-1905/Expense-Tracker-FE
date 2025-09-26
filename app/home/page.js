@@ -1,6 +1,8 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { User, BarChart3, TrendingUp, TrendingDown, LogOut, Menu, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { authService, tokenManager } from '../api/lib/auth';
 import DashboardLayout from '../screens/DashboardLayout';
 import IncomeLayout from '../screens/IncomeLayout';
 import ExpenseLayout from '../screens/ExpenseLayout'; 
@@ -32,6 +34,44 @@ const Expense = () => {
 function Home() {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    const initializeUser = async () => {
+      try {
+        // Check if user is authenticated
+        if (!tokenManager.isAuthenticated()) {
+          router.push('/login');
+          return;
+        }
+
+        // Get user data from localStorage first
+        const storedUserData = tokenManager.getUserData();
+        if (storedUserData) {
+          setUser(storedUserData);
+          setLoading(false);
+        } else {
+          // Fetch user profile if not in localStorage
+          try {
+            const profileResponse = await authService.getProfile();
+            setUser(profileResponse.user);
+            setLoading(false);
+          } catch (error) {
+            console.error('Error fetching user profile:', error);
+            // If authentication fails, redirect to login
+            router.push('/login');
+          }
+        }
+      } catch (error) {
+        console.error('Authentication check failed:', error);
+        router.push('/login');
+      }
+    };
+
+    initializeUser();
+  }, [router]);
 
   const renderContent = () => {
     switch (activeSection) {
@@ -47,17 +87,14 @@ function Home() {
   };
 
   const handleLogout = () => {
-    alert('Logging out...');
-    // Add logout logic here
+    authService.logout();
   };
 
   const handleNavClick = (section) => {
     setActiveSection(section);
-    // Close sidebar on mobile after navigation
     setIsSidebarOpen(false);
   };
 
-  // Close sidebar when clicking outside on mobile
   useEffect(() => {
     const handleOutsideClick = (event) => {
       if (isSidebarOpen && !event.target.closest('.sidebar') && !event.target.closest('.hamburger-btn')) {
@@ -68,6 +105,18 @@ function Home() {
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [isSidebarOpen]);
+
+  // Show loading spinner while checking authentication
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-100">
@@ -86,7 +135,7 @@ function Home() {
         <h2 className="text-lg font-semibold text-gray-800 capitalize">
           {activeSection}
         </h2>
-        <div className="w-10"></div> {/* Spacer for centering */}
+        <div className="w-10"></div>
       </div>
 
       {/* Mobile Overlay */}
@@ -109,7 +158,10 @@ function Home() {
               <User className="w-5 h-5 md:w-6 md:h-6 text-white" />
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-gray-800 text-sm md:text-base truncate">John Doe</h3>
+              <h3 className="font-semibold text-gray-800 text-sm md:text-base truncate">
+                {user?.name || 'User'}
+              </h3>
+              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
             </div>
           </div>
         </div>
