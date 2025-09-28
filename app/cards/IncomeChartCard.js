@@ -1,25 +1,55 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as Chart from 'chart.js';
+import { getRecentTransactions } from '../api/utils/historyAPI';
 import AddIncomeModal from './AddIncomeModal';
 
 const IncomeChartCard = () => {
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
   const [showModal, setShowModal] = useState(false);
-  
-  // Sample data - only includes days with income (no zero values)
-  const [incomeData] = useState([
-    { date: '2025-01-01', amount: 150 },
-    { date: '2025-01-03', amount: 280 },
-    { date: '2025-01-05', amount: 420 },
-    { date: '2025-01-07', amount: 320 },
-    { date: '2025-01-08', amount: 180 },
-    { date: '2025-01-10', amount: 650 },
-    { date: '2025-01-12', amount: 390 },
-    { date: '2025-01-15', amount: 220 },
-    { date: '2025-01-18', amount: 480 },
-    { date: '2025-01-20', amount: 360 }
-  ]);
+  const [incomeData, setIncomeData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch income data for the last 10 days
+  const fetchIncomeData = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const data = await getRecentTransactions(10, 100);
+      
+      // Filter only income and group by date
+      const incomes = data.transactions?.filter(t => t.type === 'income') || [];
+      
+      // Group income by date
+      const groupedByDate = incomes.reduce((acc, transaction) => {
+        const date = transaction.date.split('T')[0]; // Get just the date part
+        if (!acc[date]) {
+          acc[date] = 0;
+        }
+        acc[date] += transaction.amount;
+        return acc;
+      }, {});
+
+      // Convert to array format and sort by date
+      const chartData = Object.entries(groupedByDate)
+        .map(([date, amount]) => ({ date, amount }))
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      setIncomeData(chartData);
+    } catch (err) {
+      setError(err.message);
+      console.error('Error fetching income data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    fetchIncomeData();
+  }, []);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -34,7 +64,7 @@ const IncomeChartCard = () => {
   };
 
   useEffect(() => {
-    if (!chartRef.current) return;
+    if (!chartRef.current || incomeData.length === 0) return;
 
     // Register Chart.js components
     Chart.Chart.register(
@@ -92,7 +122,7 @@ const IncomeChartCard = () => {
             beginAtZero: true,
             ticks: {
               callback: function(value) {
-                return value;
+                return `₹${value}`;
               },
               color: '#6b7280',
               font: {
@@ -129,8 +159,7 @@ const IncomeChartCard = () => {
             },
             border: {
               display: false
-            },
-            
+            }
           }
         },
         interaction: {
@@ -152,7 +181,38 @@ const IncomeChartCard = () => {
     setShowModal(true);
   };
 
+  const handleIncomeAdded = () => {
+    // Refresh data when new income is added
+    fetchIncomeData();
+    setShowModal(false);
+  };
+
   const totalIncome = incomeData.reduce((sum, item) => sum + item.amount, 0);
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 transition-shadow duration-300 h-96 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 transition-shadow duration-300 h-96 flex items-center justify-center">
+        <div className="text-blue-500 text-center">
+          <p>Error loading income data</p>
+          <p className="text-xs mt-1">{error}</p>
+          <button 
+            onClick={fetchIncomeData}
+            className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -162,7 +222,11 @@ const IncomeChartCard = () => {
           <div>
             <h2 className="text-2xl font-bold text-gray-800">Income Overview</h2>
             <p className="text-sm text-gray-600 mt-1">
-              Total: ₹{totalIncome.toFixed(2)} • {incomeData.length} days with income
+              {incomeData.length > 0 ? (
+                <>Total: ₹{totalIncome.toFixed(2)} • Last {incomeData.length} days with income</>
+              ) : (
+                'No income in the last 10 days'
+              )}
             </p>
           </div>
           <button
@@ -176,7 +240,17 @@ const IncomeChartCard = () => {
 
         {/* Chart Container */}
         <div className="relative" style={{ height: '400px' }}>
-          <canvas ref={chartRef}></canvas>
+          {incomeData.length > 0 ? (
+            <canvas ref={chartRef}></canvas>
+          ) : (
+            <div className="flex items-center justify-center h-full bg-gray-50 rounded-lg">
+              <div className="text-center text-gray-500">
+                <p className="text-lg mb-2">📊</p>
+                <p>No income data to display</p>
+                <p className="text-xs">Add some income to see the chart</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -184,11 +258,7 @@ const IncomeChartCard = () => {
       <AddIncomeModal 
         isOpen={showModal} 
         onClose={() => setShowModal(false)}
-        onAddIncome={(incomeData) => {
-          console.log('New income data:', incomeData);
-          // Here you can add logic to update your income data
-          setShowModal(false);
-        }}
+        onAddIncome={handleIncomeAdded}
       />
     </>
   );
