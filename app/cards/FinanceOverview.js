@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Chart from 'chart.js/auto';
-import { Loader } from 'lucide-react';
+import { Loader, RefreshCw, AlertCircle } from 'lucide-react';
+import { getSummaryData } from '../api/utils/historyAPI';
 
 function FinanceOverview() {
   const chartRef = useRef(null);
@@ -8,40 +9,30 @@ function FinanceOverview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [financialData, setFinancialData] = useState({
-    income: 0,
-    expenses: 0,
-    balance: 0,
+    totalIncome: 0,
+    totalExpenses: 0,
+    totalBalance: 0,
   });
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   const fetchFinancialData = async () => {
     try {
-      const userData = JSON.parse(localStorage.getItem('expense_tracker_user_data'));
-      if (!userData?.id) {
-        throw new Error('User not authenticated');
-      }
-
-      const [balanceRes, incomeRes, expensesRes] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_HISTORY_API}/api/history/balance?user_id=${userData.id}`),
-        fetch(`${process.env.NEXT_PUBLIC_HISTORY_API}/api/history/income?user_id=${userData.id}`),
-        fetch(`${process.env.NEXT_PUBLIC_HISTORY_API}/api/history/expenses?user_id=${userData.id}`)
-      ]);
-
-      const [balance, income, expenses] = await Promise.all([
-        balanceRes.json(),
-        incomeRes.json(),
-        expensesRes.json()
-      ]);
-
-      setFinancialData({
-        income: income.total_income || 0,
-        expenses: expenses.total_expenses || 0,
-        balance: balance.balance || 0,
-      });
+      setLoading(true);
+      setError(null);
+      
+      const summaryData = await getSummaryData();
+      setFinancialData(summaryData);
+      setLastUpdated(new Date());
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Failed to fetch financial data');
+      console.error('Finance Overview fetch error:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRefresh = () => {
+    fetchFinancialData();
   };
 
   useEffect(() => {
@@ -49,17 +40,18 @@ function FinanceOverview() {
   }, []);
 
   const formatCurrency = (value) =>
-    new Intl.NumberFormat('en-US', {
+    new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(value);
+    }).format(Math.abs(value));
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || error) return;
 
-    const ctx = chartRef.current.getContext('2d');
+    const ctx = chartRef.current?.getContext('2d');
+    if (!ctx) return;
 
     if (chartInstance.current) {
       chartInstance.current.destroy();
@@ -74,27 +66,48 @@ function FinanceOverview() {
 
     const incomeGradient = createGradient(ctx, '#10B981', '#059669');
     const expensesGradient = createGradient(ctx, '#EF4444', '#DC2626');
-    const balanceGradient = createGradient(ctx, '#3B82F6', '#2563EB');
+
+    // Prepare data for chart - only show income and expenses for meaningful visualization
+    const chartData = [];
+    const chartLabels = [];
+    const chartColors = [];
+
+    if (financialData.totalIncome > 0) {
+      chartData.push(financialData.totalIncome);
+      chartLabels.push('Income');
+      chartColors.push(incomeGradient);
+    }
+
+    if (financialData.totalExpenses > 0) {
+      chartData.push(financialData.totalExpenses);
+      chartLabels.push('Expenses');
+      chartColors.push(expensesGradient);
+    }
+
+    // If no data, show placeholder
+    if (chartData.length === 0) {
+      chartData.push(1);
+      chartLabels.push('No Data');
+      chartColors.push('#E5E7EB');
+    }
 
     chartInstance.current = new Chart(ctx, {
       type: 'doughnut',
       data: {
-        labels: ['Income', 'Expenses', 'Balance'],
+        labels: chartLabels,
         datasets: [
           {
-            data: [
-              financialData.income || 0.01, // ensure minimum value
-              financialData.expenses || 0.01,
-              financialData.balance || 0.01,
-            ],
-            backgroundColor: [incomeGradient, expensesGradient, balanceGradient],
-            borderWidth: 1,
-            borderColor: ['rgba(16, 185, 129, 0.2)', 'rgba(239, 68, 68, 0.2)', 'rgba(59, 130, 246, 0.2)'],
+            data: chartData,
+            backgroundColor: chartColors,
+            borderWidth: 2,
+            borderColor: chartColors.map(color => 
+              typeof color === 'string' ? color : 'rgba(255, 255, 255, 0.1)'
+            ),
             cutout: '70%',
             spacing: 4,
             borderRadius: 8,
-            hoverBorderWidth: 3,
-            hoverBorderColor: 'rgba(255, 255, 255, 0.8)',
+            hoverBorderWidth: 4,
+            hoverBorderColor: 'rgba(255, 255, 255, 0.9)',
           },
         ],
       },
@@ -110,7 +123,7 @@ function FinanceOverview() {
             bodyColor: '#ffffff',
             borderColor: 'rgba(255, 255, 255, 0.2)',
             borderWidth: 1,
-            cornerRadius: 8,
+            cornerRadius: 12,
             displayColors: true,
             padding: 16,
             titleFont: { size: 16, weight: '600' },
@@ -129,13 +142,14 @@ function FinanceOverview() {
               },
               label: function (context) {
                 const value = context.parsed;
-                return formatCurrency(value);
+                const percentage = ((value / chartData.reduce((a, b) => a + b, 0)) * 100).toFixed(1);
+                return [formatCurrency(value), `${percentage}% of total`];
               },
               labelColor: function(context) {
                 const colors = ['#10B981', '#EF4444', '#3B82F6'];
                 return {
-                  borderColor: colors[context.dataIndex],
-                  backgroundColor: colors[context.dataIndex],
+                  borderColor: colors[context.dataIndex] || '#E5E7EB',
+                  backgroundColor: colors[context.dataIndex] || '#E5E7EB',
                   borderWidth: 0,
                   borderRadius: 6,
                 };
@@ -144,53 +158,20 @@ function FinanceOverview() {
             animation: {
               duration: 200,
             },
-            position: 'average',
-            external: function(context) {
-              // Get tooltip, chart, and canvas references
-              const {chart, tooltip} = context;
-              const canvas = chart.canvas;
-              
-              if (tooltip.opacity === 0) return;
-              
-              // Get the center of the chart
-              const centerX = chart.width / 2;
-              const centerY = chart.height / 2;
-              
-              // Get the tooltip position relative to the center
-              const tooltipX = tooltip.caretX;
-              const tooltipY = tooltip.caretY;
-              
-              // Calculate the direction from center to hover point
-              const deltaX = tooltipX - centerX;
-              const deltaY = tooltipY - centerY;
-              
-              // Calculate the distance and normalize
-              const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-              const normalizedX = deltaX / distance;
-              const normalizedY = deltaY / distance;
-              
-              // Position tooltip outside the circle (radius ~140px, tooltip offset ~180px)
-              const offset = 180;
-              const newX = centerX + normalizedX * offset;
-              const newY = centerY + normalizedY * offset;
-              
-              // Update tooltip position
-              tooltip.x = newX;
-              tooltip.y = newY;
-            },
+            position: 'nearest',
           },
         },
         animation: {
           animateRotate: true,
           animateScale: true,
-          duration: 1500,
+          duration: 1200,
           easing: 'easeOutCubic',
         },
         elements: {
           arc: { 
-            borderWidth: 0, 
-            hoverBorderWidth: 3,
-            hoverBorderColor: 'rgba(255, 255, 255, 0.8)',
+            borderWidth: 2, 
+            hoverBorderWidth: 4,
+            hoverBorderColor: 'rgba(255, 255, 255, 0.9)',
           },
         },
         interaction: { 
@@ -210,32 +191,69 @@ function FinanceOverview() {
     return () => {
       chartInstance.current?.destroy();
     };
-  }, [loading, financialData.income, financialData.expenses, financialData.balance]);
+  }, [loading, error, financialData.totalIncome, financialData.totalExpenses]);
 
   if (loading) {
     return (
       <div className="bg-white rounded-xl shadow-md p-8 border border-gray-100/50 backdrop-blur-sm min-h-[600px] flex items-center justify-center">
-        <Loader className="w-8 h-8 animate-spin text-gray-400" />
+        <div className="text-center">
+          <Loader className="w-8 h-8 animate-spin text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-500">Loading financial overview...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-white rounded-xl shadow-md p-8 border border-gray-100/50 backdrop-blur-sm">
-        <div className="text-center text-red-600">Error: {error}</div>
+      <div className="bg-white rounded-xl shadow-md p-8 border border-gray-100/50 backdrop-blur-sm min-h-[600px] flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">Unable to Load Data</h3>
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={handleRefresh}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
 
+  const netWorth = financialData.totalBalance;
+  const savingsRate = financialData.totalIncome > 0 
+    ? ((netWorth / financialData.totalIncome) * 100) 
+    : 0;
+  const expenseRatio = financialData.totalIncome > 0 
+    ? ((financialData.totalExpenses / financialData.totalIncome) * 100) 
+    : 0;
+
   return (
     <div className="bg-white rounded-xl shadow-md p-8 border border-gray-100/50 backdrop-blur-sm">
       {/* Header */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">
-          Financial Overview
-        </h2>
-        <p className="text-gray-500">Your financial breakdown at a glance</p>
+      <div className="flex justify-between items-start mb-8">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            Financial Overview
+          </h2>
+          <p className="text-gray-500">Your financial breakdown at a glance</p>
+          {lastUpdated && (
+            <p className="text-xs text-gray-400 mt-1">
+              Last updated: {lastUpdated.toLocaleTimeString()}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={loading}
+          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
       </div>
 
       {/* Chart Container */}
@@ -247,10 +265,17 @@ function FinanceOverview() {
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="text-center">
               <p className="text-sm font-medium text-gray-500 mb-1">
-                Net Worth
+                Net Balance
               </p>
-              <p className="text-3xl font-bold text-gray-800">
-                {formatCurrency(financialData.income - financialData.expenses)}
+              <p className={`text-3xl font-bold ${
+                netWorth >= 0 ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {formatCurrency(netWorth)}
+              </p>
+              <p className={`text-xs mt-1 ${
+                netWorth >= 0 ? 'text-green-500' : 'text-red-500'
+              }`}>
+                {netWorth >= 0 ? 'Surplus' : 'Deficit'}
               </p>
             </div>
           </div>
@@ -260,42 +285,109 @@ function FinanceOverview() {
       {/* Legend */}
       <div className="flex justify-center mb-8">
         <div className="flex space-x-8">
-          <div className="flex items-center">
-            <div className="w-4 h-4 rounded-full bg-gradient-to-r from-green-500 to-green-600 mr-3"></div>
-            <span className="text-sm font-medium text-gray-700">Income</span>
+          {financialData.totalIncome > 0 && (
+            <div className="flex items-center">
+              <div className="w-4 h-4 rounded-full bg-gradient-to-r from-green-500 to-green-600 mr-3"></div>
+              <span className="text-sm font-medium text-gray-700">Income</span>
+            </div>
+          )}
+          {financialData.totalExpenses > 0 && (
+            <div className="flex items-center">
+              <div className="w-4 h-4 rounded-full bg-gradient-to-r from-red-500 to-red-600 mr-3"></div>
+              <span className="text-sm font-medium text-gray-700">Expenses</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Financial Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {/* Income Card */}
+        <div className="p-4 rounded-xl bg-gradient-to-br from-green-50 to-green-100/50 border border-green-100">
+          <div className="text-center">
+            <p className="text-sm font-medium text-green-600/80 mb-1">Total Income</p>
+            <p className="text-xl font-bold text-green-700">
+              {formatCurrency(financialData.totalIncome)}
+            </p>
           </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 rounded-full bg-gradient-to-r from-red-500 to-red-600 mr-3"></div>
-            <span className="text-sm font-medium text-gray-700">Expenses</span>
+        </div>
+
+        {/* Expenses Card */}
+        <div className="p-4 rounded-xl bg-gradient-to-br from-red-50 to-red-100/50 border border-red-100">
+          <div className="text-center">
+            <p className="text-sm font-medium text-red-600/80 mb-1">Total Expenses</p>
+            <p className="text-xl font-bold text-red-700">
+              {formatCurrency(financialData.totalExpenses)}
+            </p>
           </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 mr-3"></div>
-            <span className="text-sm font-medium text-gray-700">Balance</span>
+        </div>
+
+        {/* Balance Card */}
+        <div className={`p-4 rounded-xl border ${
+          netWorth >= 0 
+            ? 'bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-100' 
+            : 'bg-gradient-to-br from-red-50 to-red-100/50 border-red-100'
+        }`}>
+          <div className="text-center">
+            <p className={`text-sm font-medium mb-1 ${
+              netWorth >= 0 ? 'text-blue-600/80' : 'text-red-600/80'
+            }`}>
+              Net Balance
+            </p>
+            <p className={`text-xl font-bold ${
+              netWorth >= 0 ? 'text-blue-700' : 'text-red-700'
+            }`}>
+              {formatCurrency(netWorth)}
+            </p>
           </div>
         </div>
       </div>
 
       {/* Quick Stats */}
       <div className="pt-6 border-t border-gray-200/50">
-        <div className="grid grid-cols-2 gap-6">
-          <div className="text-center p-4 rounded-2xl bg-gradient-to-br from-green-50 to-green-100/50">
-            <p className="text-sm font-medium text-green-600/80 mb-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className={`text-center p-4 rounded-2xl ${
+            savingsRate >= 0 
+              ? 'bg-gradient-to-br from-green-50 to-green-100/50' 
+              : 'bg-gradient-to-br from-red-50 to-red-100/50'
+          }`}>
+            <p className={`text-sm font-medium mb-1 ${
+              savingsRate >= 0 ? 'text-green-600/80' : 'text-red-600/80'
+            }`}>
               Savings Rate
             </p>
-            <p className="text-xl font-bold text-green-700">
-              {financialData.income ? ((financialData.balance / financialData.income) * 100).toFixed(1) : "0"}%
+            <p className={`text-xl font-bold ${
+              savingsRate >= 0 ? 'text-green-700' : 'text-red-700'
+            }`}>
+              {savingsRate.toFixed(1)}%
             </p>
           </div>
-          <div className="text-center p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100/50">
-            <p className="text-sm font-medium text-blue-600/80 mb-1">
+          <div className="text-center p-4 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100/50">
+            <p className="text-sm font-medium text-orange-600/80 mb-1">
               Expense Ratio
             </p>
-            <p className="text-xl font-bold text-blue-700">
-              {financialData.income ? ((financialData.expenses / financialData.income) * 100).toFixed(1) : "0"}%
+            <p className="text-xl font-bold text-orange-700">
+              {expenseRatio.toFixed(1)}%
             </p>
           </div>
         </div>
       </div>
+
+{/* Future Upgrade, Insights with AI model */}
+
+      {/* Additional Insights
+      {(financialData.totalIncome > 0 || financialData.totalExpenses > 0) && (
+        <div className="mt-6 p-4 bg-gray-50 rounded-xl">
+          <h4 className="text-sm font-semibold text-gray-700 mb-2">Financial Health</h4>
+          <div className="text-sm text-gray-600">
+            {netWorth >= 0 ? (
+              <p>✅ You're maintaining a positive balance. Keep up the good work!</p>
+            ) : (
+              <p>⚠️ You're spending more than you're earning. Consider reviewing your expenses.</p>
+            )}
+          </div>
+        </div>
+      )} */}
     </div>
   );
 }
