@@ -82,7 +82,7 @@ const IncomeChartCard = () => {
             borderWidth: 1,
             callbacks: {
               label: function(context) {
-                return `Income: $${context.parsed.y.toFixed(2)}`;
+                return `Income: ₹${context.parsed.y.toFixed(2)}`;
               }
             }
           }
@@ -162,7 +162,7 @@ const IncomeChartCard = () => {
           <div>
             <h2 className="text-2xl font-bold text-gray-800">Income Overview</h2>
             <p className="text-sm text-gray-600 mt-1">
-              Total: ${totalIncome.toFixed(2)} • {incomeData.length} days with income
+              Total: ₹{totalIncome.toFixed(2)} • {incomeData.length} days with income
             </p>
           </div>
           <button
