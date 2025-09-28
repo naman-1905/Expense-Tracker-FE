@@ -3,6 +3,32 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authService } from "../../api/lib/auth";
 
+// Import the setAuthData function
+const setAuthData = (userData, token) => {
+  try {
+    // Store user data in localStorage for transaction API
+    if (userData) {
+      localStorage.setItem('expense_tracker_user_data', JSON.stringify({
+        id: userData.user_id || userData.id,
+        name: userData.name,
+        email: userData.email
+      }));
+    }
+    
+    // Store token in localStorage as backup (main storage is in cookies)
+    if (token) {
+      localStorage.setItem('auth_token', token);
+    }
+    
+    console.log('Auth data set successfully:', {
+      userData: userData ? 'Set' : 'Not provided',
+      token: token ? 'Set' : 'Not provided'
+    });
+  } catch (error) {
+    console.error('Error setting auth data:', error);
+  }
+};
+
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,6 +46,33 @@ function Login() {
       const response = await authService.login(credentials);
       
       console.log('Login successful:', response);
+      console.log('Response structure:', Object.keys(response));
+      
+      // Store auth data for transaction API
+      // Handle different possible response structures
+      if (response.user && response.token) {
+        setAuthData(response.user, response.token);
+      } else if (response.access_token) {
+        // If response has access_token and user data at root level
+        setAuthData(response, response.access_token);
+      } else if (response.data && response.data.user) {
+        // If user data is nested in data object
+        setAuthData(response.data.user, response.data.token || response.data.access_token);
+      } else {
+        // Fallback - try to extract user info from response
+        console.log('Attempting to extract user data from response...');
+        const userData = {
+          id: response.user_id || response.id,
+          name: response.name,
+          email: response.email
+        };
+        const token = response.token || response.access_token || response.accessToken;
+        setAuthData(userData, token);
+      }
+      
+      // Debug: Check what was stored
+      console.log('Stored user data:', localStorage.getItem('expense_tracker_user_data'));
+      console.log('Stored token:', localStorage.getItem('auth_token'));
       
       // Redirect to home page (your dashboard)
       router.push('/home');
@@ -121,6 +174,17 @@ function Login() {
               )}
             </button>
           </form>
+
+          {/* Debug Section - Remove this in production */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Debug Info:</h4>
+              <div className="text-xs text-gray-600 space-y-1">
+                <div>User Data: {localStorage.getItem('expense_tracker_user_data') || 'Not set'}</div>
+                <div>Token: {localStorage.getItem('auth_token') ? 'Set' : 'Not set'}</div>
+              </div>
+            </div>
+          )}
 
           {/* Divider */}
           <div className="my-6 flex items-center">
