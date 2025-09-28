@@ -239,7 +239,6 @@ function FinanceOverview() {
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
             Financial Overview
           </h2>
-          <p className="text-gray-500">Your financial breakdown at a glance</p>
           {lastUpdated && (
             <p className="text-xs text-gray-400 mt-1">
               Last updated: {lastUpdated.toLocaleTimeString()}
