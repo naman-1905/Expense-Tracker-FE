@@ -81,7 +81,7 @@ const ExpenseChartCard = () => {
             borderColor: 'rgba(239, 68, 68, 1)',
             borderWidth: 1,
             callbacks: {
-              label: (context) => `Expense: $${context.parsed.y.toFixed(2)}`
+              label: (context) => `Expense: ₹${context.parsed.y.toFixed(2)}`
             }
           }
         },
@@ -91,7 +91,7 @@ const ExpenseChartCard = () => {
             ticks: {
               color: '#6b7280',
               font: { size: 14 },
-              callback: (value) => `$${value}`
+              callback: (value) => `₹${value}`
             },
             grid: { color: 'rgba(229, 231, 235, 0.5)' },
             border: { display: false },
@@ -141,7 +141,7 @@ const ExpenseChartCard = () => {
           <div>
             <h2 className="text-2xl font-bold text-gray-800">Expense Overview</h2>
             <p className="text-sm text-gray-600 mt-1">
-              Total: ${totalExpenses.toFixed(2)} • {expenseData.length} expense days
+              Total: ₹{totalExpenses.toFixed(2)} • {expenseData.length} expense days
             </p>
           </div>
           <button
