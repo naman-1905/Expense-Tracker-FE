@@ -1,4 +1,3 @@
-// cards/Summary.js
 import React, { useState, useEffect } from 'react';
 import { Wallet, TrendingUp, TrendingDown, RefreshCw, Loader, AlertCircle } from 'lucide-react';
 import { getSummaryData } from '../api/utils/historyAPI';
