@@ -1,25 +1,55 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as Chart from 'chart.js';
-import AddExpenseModal from './AddExpenseModal'; // you'll need to create this modal
+import { getRecentTransactions } from '../api/utils/historyAPI';
+import AddExpenseModal from './AddExpenseModal';
 
 const ExpenseChartCard = () => {
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
   const [showModal, setShowModal] = useState(false);
+  const [expenseData, setExpenseData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Sample expense data
-  const [expenseData, setExpenseData] = useState([
-    { date: '2025-01-01', amount: 90 },
-    { date: '2025-01-04', amount: 200 },
-    { date: '2025-01-06', amount: 130 },
-    { date: '2025-01-09', amount: 250 },
-    { date: '2025-01-11', amount: 170 },
-    { date: '2025-01-14', amount: 300 },
-    { date: '2025-01-16', amount: 220 },
-    { date: '2025-01-19', amount: 150 },
-    { date: '2025-01-22', amount: 280 },
-    { date: '2025-01-25', amount: 190 }
-  ]);
+  // Fetch expense data for the last 10 days
+  const fetchExpenseData = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const data = await getRecentTransactions(10, 100);
+      
+      // Filter only expenses and group by date
+      const expenses = data.transactions?.filter(t => t.type === 'expense') || [];
+      
+      // Group expenses by date
+      const groupedByDate = expenses.reduce((acc, transaction) => {
+        const date = transaction.date.split('T')[0]; // Get just the date part
+        if (!acc[date]) {
+          acc[date] = 0;
+        }
+        acc[date] += transaction.amount;
+        return acc;
+      }, {});
+
+      // Convert to array format and sort by date
+      const chartData = Object.entries(groupedByDate)
+        .map(([date, amount]) => ({ date, amount }))
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      setExpenseData(chartData);
+    } catch (err) {
+      setError(err.message);
+      console.error('Error fetching expense data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    fetchExpenseData();
+  }, []);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -34,7 +64,7 @@ const ExpenseChartCard = () => {
   };
 
   useEffect(() => {
-    if (!chartRef.current) return;
+    if (!chartRef.current || expenseData.length === 0) return;
 
     Chart.Chart.register(
       Chart.CategoryScale,
@@ -131,7 +161,38 @@ const ExpenseChartCard = () => {
     setShowModal(true);
   };
 
+  const handleExpenseAdded = () => {
+    // Refresh data when new expense is added
+    fetchExpenseData();
+    setShowModal(false);
+  };
+
   const totalExpenses = expenseData.reduce((sum, item) => sum + item.amount, 0);
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 transition-shadow duration-300 h-96 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 transition-shadow duration-300 h-96 flex items-center justify-center">
+        <div className="text-red-500 text-center">
+          <p>Error loading expense data</p>
+          <p className="text-xs mt-1">{error}</p>
+          <button 
+            onClick={fetchExpenseData}
+            className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -141,7 +202,11 @@ const ExpenseChartCard = () => {
           <div>
             <h2 className="text-2xl font-bold text-gray-800">Expense Overview</h2>
             <p className="text-sm text-gray-600 mt-1">
-              Total: ₹{totalExpenses.toFixed(2)} • {expenseData.length} expense days
+              {expenseData.length > 0 ? (
+                <>Total: ₹{totalExpenses.toFixed(2)} • Last {expenseData.length} days with expenses</>
+              ) : (
+                'No expenses in the last 10 days'
+              )}
             </p>
           </div>
           <button
@@ -155,7 +220,17 @@ const ExpenseChartCard = () => {
 
         {/* Chart Container */}
         <div className="relative" style={{ height: '400px' }}>
-          <canvas ref={chartRef}></canvas>
+          {expenseData.length > 0 ? (
+            <canvas ref={chartRef}></canvas>
+          ) : (
+            <div className="flex items-center justify-center h-full bg-gray-50 rounded-lg">
+              <div className="text-center text-gray-500">
+                <p className="text-lg mb-2">📊</p>
+                <p>No expense data to display</p>
+                <p className="text-xs">Add some expenses to see the chart</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -163,11 +238,7 @@ const ExpenseChartCard = () => {
       <AddExpenseModal 
         isOpen={showModal} 
         onClose={() => setShowModal(false)}
-        onAddExpense={(expense) => {
-          // Example: update expenseData with new entry
-          setExpenseData(prev => [...prev, expense]);
-          setShowModal(false);
-        }}
+        onAddExpense={handleExpenseAdded}
       />
     </>
   );
