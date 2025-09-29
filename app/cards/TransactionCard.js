@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Filter } from 'lucide-react';
+import { Calendar, Filter, Trash2 } from 'lucide-react';
 import { getRecentTransactions, getTransactionsDateRange } from '../api/utils/historyAPI';
+import { deleteTransaction } from '../api/utils/transactionAPI';
 
 const TransactionCard = () => {
   const [transactions, setTransactions] = useState([]);
@@ -11,6 +12,7 @@ const TransactionCard = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [customDateMode, setCustomDateMode] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   // Period options
   const periodOptions = [
@@ -49,6 +51,25 @@ const TransactionCard = () => {
       console.error('Error fetching transactions:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle delete transaction
+  const handleDeleteTransaction = async (transactionId) => {
+    if (!confirm('Are you sure you want to delete this transaction?')) {
+      return;
+    }
+
+    setDeletingId(transactionId);
+    try {
+      await deleteTransaction(transactionId);
+      // Remove the deleted transaction from the list
+      setTransactions(prev => prev.filter(t => t.transaction_id !== transactionId));
+    } catch (err) {
+      console.error('Error deleting transaction:', err);
+      alert('Failed to delete transaction. Please try again.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -186,7 +207,7 @@ const TransactionCard = () => {
               {transactions.map((transaction) => (
                 <div 
                   key={transaction.transaction_id} 
-                  className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors duration-150"
+                  className="group flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors duration-150"
                 >
                   {/* Left side: Emoji and Title */}
                   <div className="flex items-center space-x-3">
@@ -203,13 +224,29 @@ const TransactionCard = () => {
                     </div>
                   </div>
 
-                  {/* Right side: Amount */}
-                  <div className="text-right">
-                    <p className={`font-semibold text-sm ${
-                      transaction.type === 'expense' ? 'text-red-600' : 'text-green-600'
-                    }`}>
-                      {transaction.type === 'expense' ? '-' : '+'}{formatAmount(transaction.amount)}
-                    </p>
+                  {/* Right side: Amount and Delete Button */}
+                  <div className="flex items-center space-x-3">
+                    <div className="text-right">
+                      <p className={`font-semibold text-sm ${
+                        transaction.type === 'expense' ? 'text-red-600' : 'text-green-600'
+                      }`}>
+                        {transaction.type === 'expense' ? '-' : '+'}{formatAmount(transaction.amount)}
+                      </p>
+                    </div>
+                    
+                    {/* Delete Button */}
+                    <button
+                      onClick={() => handleDeleteTransaction(transaction.transaction_id)}
+                      disabled={deletingId === transaction.transaction_id}
+                      className="lg:opacity-0 lg:group-hover:opacity-100 text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-all duration-200 disabled:opacity-50"
+                      title="Delete transaction"
+                    >
+                      {deletingId === transaction.transaction_id ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b border-red-500"></div>
+                      ) : (
+                        <Trash2 size={14} />
+                      )}
+                    </button>
                   </div>
                 </div>
               ))}
