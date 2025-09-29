@@ -175,16 +175,6 @@ function Login() {
             </button>
           </form>
 
-          {/* Debug Section - Remove this in production */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Debug Info:</h4>
-              <div className="text-xs text-gray-600 space-y-1">
-                <div>User Data: {localStorage.getItem('expense_tracker_user_data') || 'Not set'}</div>
-                <div>Token: {localStorage.getItem('auth_token') ? 'Set' : 'Not set'}</div>
-              </div>
-            </div>
-          )}
 
           {/* Divider */}
           <div className="my-6 flex items-center">
