@@ -1,80 +1,87 @@
 pipeline {
     agent any
 
+    parameters {
+        choice(
+            name: 'REGISTRY_OPTION',
+            choices: ['Kshitiz Container (10.243.4.236:5000)', 'Naman Container (10.243.250.123:5000)'],
+            description: 'Select which registry to push the image to'
+        )
+        choice(
+            name: 'DEPLOY_HOST',
+            choices: ['10.243.4.236', '10.243.250.132', 'both'],
+            description: 'Select where to deploy the container'
+        )
+    }
+
     environment {
-        IMAGE_NAME      = "halfskirmish_expenses"
-        TAG             = "latest"
-        REGISTRY        = "10.243.4.236:5000"
-        DEPLOYMENT_NAME = "halfskirmish-expenses"
-        DOCKER_HOST     = "tcp://10.243.52.185:2375"
-        APP_NETWORK     = "app"
+        IMAGE_NAME     = "halfskirmish-expenses"
+        CONTAINER_NAME = "halfskirmish-expenses"
+        NETWORK        = "network-app"
     }
 
     stages {
+        stage('Set Registry') {
+            steps {
+                script {
+                    if (params.REGISTRY_OPTION == 'Kshitiz Container (10.243.4.236:5000)') {
+                        env.REGISTRY = "10.243.4.236:5000"
+                    } else {
+                        env.REGISTRY = "10.243.250.123:5000"
+                    }
+                }
+            }
+        }
+
+        stage('Prepare Environment Files') {
+            steps {
+                script {
+                    // Remove all .env.* files (like .env.local, .env.dev, etc.)
+                    sh "rm -f .env.*"
+
+                    // Ensure only .env is used
+                    if (!fileExists('.env')) {
+                        error(".env file not found in the project directory!")
+                    }
+                }
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
                 script {
-                    echo 'Building Docker Image...'
-                    sh "docker build -t ${IMAGE_NAME}:${TAG} ."
-                }
-            }
-        }
-
-        stage('Tag Image for Registry') {
-            steps {
-                script {
-                    echo 'Tagging image for remote registry...'
-                    sh "docker tag ${IMAGE_NAME}:${TAG} ${REGISTRY}/${IMAGE_NAME}:${TAG}"
-                }
-            }
-        }
-
-        stage('Push Image to Registry') {
-            steps {
-                script {
-                    echo 'Pushing Docker Image to Registry...'
-                    sh "docker push ${REGISTRY}/${IMAGE_NAME}:${TAG}"
-                }
-            }
-        }
-
-        stage('Deploy to Remote Docker') {
-            steps {
-                script {
-                    echo "Deploying ${DEPLOYMENT_NAME} on remote Docker host..."
-
-                    // Create app network if not exists
                     sh """
-                        docker -H ${DOCKER_HOST} network inspect ${APP_NETWORK} >/dev/null 2>&1 || \
-                        docker -H ${DOCKER_HOST} network create ${APP_NETWORK}
-                    """
-
-                    // Stop and remove old container if running
-                    sh """
-                        docker -H ${DOCKER_HOST} ps -q --filter name=${DEPLOYMENT_NAME} | grep -q . && \
-                        docker -H ${DOCKER_HOST} stop ${DEPLOYMENT_NAME} || true
-                    """
-                    sh """
-                        docker -H ${DOCKER_HOST} ps -aq --filter name=${DEPLOYMENT_NAME} | grep -q . && \
-                        docker -H ${DOCKER_HOST} rm ${DEPLOYMENT_NAME} || true
-                    """
-
-                    // Run new container
-                    sh """
-                        docker -H ${DOCKER_HOST} run -d --name ${DEPLOYMENT_NAME} \\
-                        --network ${APP_NETWORK} \\
-                        ${REGISTRY}/${IMAGE_NAME}:${TAG}
+                        docker build -t \$IMAGE_NAME .
+                        docker tag \$IMAGE_NAME \$REGISTRY/\$IMAGE_NAME
                     """
                 }
             }
         }
 
-        stage('Cleanup Local') {
+        stage('Push Docker Image') {
+            steps {
+                sh "docker push \$REGISTRY/\$IMAGE_NAME"
+            }
+        }
+
+        stage('Deploy Container') {
             steps {
                 script {
-                    echo 'Cleaning up unused local Docker resources...'
-                    sh "docker image prune -f"
-                    sh "docker container prune -f"
+                    def deployHosts = []
+                    if (params.DEPLOY_HOST == 'both') {
+                        deployHosts = ['10.243.4.236', '10.243.250.132']
+                    } else {
+                        deployHosts = [params.DEPLOY_HOST]
+                    }
+
+                    for (host in deployHosts) {
+                        sh """
+                            docker -H tcp://$host:2375 pull $REGISTRY/$IMAGE_NAME
+                            docker -H tcp://$host:2375 stop $CONTAINER_NAME || true
+                            docker -H tcp://$host:2375 rm $CONTAINER_NAME || true
+                            docker -H tcp://$host:2375 run -d --name $CONTAINER_NAME --network $NETWORK $REGISTRY/$IMAGE_NAME
+                        """
+                    }
                 }
             }
         }
