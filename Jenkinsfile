@@ -17,7 +17,7 @@ pipeline {
     environment {
         IMAGE_NAME     = "halfskirmish-expenses"
         CONTAINER_NAME = "halfskirmish-expenses"
-        NETWORK        = "network-app"
+        NETWORK        = "app"
     }
 
     stages {
