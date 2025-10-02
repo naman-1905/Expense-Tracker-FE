@@ -169,16 +169,16 @@ const ExpensesCard = () => {
     <div className="bg-white rounded-xl shadow-md border border-gray-100 transition-shadow duration-300 min-h-[400px] max-h-[600px] sm:h-96 flex flex-col">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 sm:p-6 pb-4 border-b border-gray-100">
-        <div className="flex items-center space-x-4">
-          <h2 className="text-2xl font-bold text-gray-800">Expenses</h2>
+        <div className="w-full sm:w-auto">
+          <h2 className="text-2xl font-bold text-gray-800 mb-3 sm:mb-0">Expenses</h2>
           
           {/* Month/Year Selector */}
-          <div className="flex items-center space-x-2 flex-wrap">
-            <Calendar size={16} className="text-gray-400" />
+          <div className="flex items-center gap-2 sm:gap-2">
+            <Calendar size={16} className="text-gray-400 flex-shrink-0" />
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="appearance-none bg-gray-50 border border-gray-200 rounded-lg px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="appearance-none bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1 sm:flex-none"
             >
               {monthOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -189,7 +189,7 @@ const ExpensesCard = () => {
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
-              className="appearance-none bg-gray-50 border border-gray-200 rounded-lg px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="appearance-none bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1 sm:flex-none"
             >
               {generateYearOptions().map(year => (
                 <option key={year} value={year}>
@@ -203,7 +203,7 @@ const ExpensesCard = () => {
         <button
           onClick={downloadExcel}
           disabled={expenses.length === 0}
-          className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 text-sm font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
+          className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 text-sm font-medium disabled:bg-gray-300 disabled:cursor-not-allowed w-full sm:w-auto justify-center"
         >
           <Download size={16} />
           <span>Download</span>
