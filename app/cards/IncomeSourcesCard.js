@@ -166,14 +166,14 @@ const IncomeSourcesCard = () => {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-md border border-gray-100 transition-shadow duration-300 h-96 flex flex-col">
+    <div className="bg-white rounded-xl shadow-md border border-gray-100 transition-shadow duration-300 min-h-[400px] max-h-[600px] sm:h-96 flex flex-col">
       {/* Header */}
-      <div className="flex justify-between items-center p-6 pb-4 border-b border-gray-100">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 sm:p-6 pb-4 border-b border-gray-100">
         <div className="flex items-center space-x-4">
           <h2 className="text-2xl font-bold text-gray-800">Income Sources</h2>
           
           {/* Month/Year Selector */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 flex-wrap">
             <Calendar size={16} className="text-gray-400" />
             <select
               value={selectedMonth}
@@ -240,7 +240,7 @@ const IncomeSourcesCard = () => {
           <div className="h-full overflow-y-auto">
             {/* Scrollable Income Sources List */}
             <div className="px-6 py-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 {incomeSources.map((source) => (
                   <div
                     key={source.id}
