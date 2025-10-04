@@ -53,14 +53,28 @@ const IncomeSourcesCard = () => {
     return { startDate, endDate: endDateStr };
   };
 
+  // Get cache key for current selection
+  const getCacheKey = () => {
+    return `incomeSourcesData_${selectedYear}_${selectedMonth}`;
+  };
+
   // Fetch income sources for selected month
   const fetchIncomeSources = async () => {
     if (!selectedMonth || !selectedYear) return;
     
-    setLoading(true);
-    setError(null);
-    
     try {
+      setLoading(true);
+      setError(null);
+      
+      // Load cached data first
+      const cacheKey = getCacheKey();
+      const cachedData = localStorage.getItem(cacheKey);
+      if (cachedData) {
+        setIncomeSources(JSON.parse(cachedData));
+        setLoading(false);
+      }
+      
+      // Fetch fresh data in background
       const { startDate, endDate } = getMonthDateRange(selectedMonth, selectedYear);
       const data = await getTransactionsDateRange(startDate, endDate, 1000);
       
@@ -89,6 +103,9 @@ const IncomeSourcesCard = () => {
         .map((source, index) => ({ ...source, id: index + 1 }));
 
       setIncomeSources(incomeArray);
+      
+      // Cache the fresh data
+      localStorage.setItem(cacheKey, JSON.stringify(incomeArray));
     } catch (err) {
       setError(err.message);
       console.error('Error fetching income sources:', err);
@@ -212,11 +229,11 @@ const IncomeSourcesCard = () => {
 
       {/* Content Area with Scroll */}
       <div className="flex-1 overflow-hidden">
-        {loading ? (
+        {loading && incomeSources.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
           </div>
-        ) : error ? (
+        ) : error && incomeSources.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-green-500 text-center">
               <p>Error loading income sources</p>
