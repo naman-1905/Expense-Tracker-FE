@@ -197,7 +197,7 @@ const TransactionCard = () => {
         ) : transactions.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-gray-500 text-center">
-              <p>No transactions found</p>
+              <p className='font-bold'>No transactions found</p>
               <p className="text-xs mt-1">Try adjusting your date range</p>
             </div>
           </div>
