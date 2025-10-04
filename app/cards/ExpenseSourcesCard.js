@@ -9,7 +9,11 @@ const ExpensesCard = () => {
   const [error, setError] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
+  const [selectedCurrency, setSelectedCurrency] = useState('INR');
+  const [exchangeRates, setExchangeRates] = useState({});
+  const [currenciesLoading, setCurrenciesLoading] = useState(true);
 
+  
   // Initialize with current month/year
   useEffect(() => {
     const now = new Date();
@@ -18,6 +22,23 @@ const ExpensesCard = () => {
     setSelectedMonth(currentMonth);
     setSelectedYear(currentYear);
   }, []);
+
+  useEffect(() => {
+  const fetchExchangeRates = async () => {
+    try {
+      setCurrenciesLoading(true);
+      const response = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/inr.json');
+      const data = await response.json();
+      setExchangeRates(data.inr || {});
+    } catch (err) {
+      console.error('Error fetching exchange rates:', err);
+    } finally {
+      setCurrenciesLoading(false);
+    }
+  };
+
+  fetchExchangeRates();
+}, []);
 
   // Generate year options (current year and past 5 years)
   const generateYearOptions = () => {
@@ -45,6 +66,19 @@ const ExpensesCard = () => {
     { value: '12', label: 'December' }
   ];
 
+  const popularCurrencies = [
+  { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
+  { code: 'USD', name: 'US Dollar', symbol: '$' },
+  { code: 'EUR', name: 'Euro', symbol: '€' },
+  { code: 'GBP', name: 'British Pound', symbol: '£' },
+  { code: 'JPY', name: 'Japanese Yen', symbol: '¥' },
+  { code: 'AUD', name: 'Australian Dollar', symbol: 'A$' },
+  { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$' },
+  { code: 'CHF', name: 'Swiss Franc', symbol: 'Fr' },
+  { code: 'CNY', name: 'Chinese Yuan', symbol: '¥' },
+  { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$' }
+];
+
   // Get date range for selected month/year
   const getMonthDateRange = (month, year) => {
     const startDate = `${year}-${month}-01`;
@@ -57,6 +91,13 @@ const ExpensesCard = () => {
   const getCacheKey = () => {
     return `expensesData_${selectedYear}_${selectedMonth}`;
   };
+
+
+  const convertCurrency = (amountInINR) => {
+  if (selectedCurrency === 'INR') return amountInINR;
+  const rate = exchangeRates[selectedCurrency.toLowerCase()];
+  return rate ? amountInINR * rate : amountInINR;
+};
 
   // Fetch expenses for selected month
   const fetchExpenses = async () => {
@@ -121,25 +162,27 @@ const ExpensesCard = () => {
     }
   }, [selectedMonth, selectedYear]);
 
-  const formatAmount = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
+const formatAmount = (amount) => {
+  const convertedAmount = convertCurrency(amount);
+  const currencyInfo = popularCurrencies.find(c => c.code === selectedCurrency);
+  
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  }).format(convertedAmount) + ' ' + (currencyInfo?.symbol || selectedCurrency);
+};
 
   const downloadExcel = () => {
     if (expenses.length === 0) return;
 
     // Prepare data for Excel
-    const excelData = expenses.map(expense => ({
-      'Category': expense.name,
-      'Amount': expense.amount,
-      'Transaction Count': expense.count,
-      'Formatted Amount': formatAmount(expense.amount)
-    }));
+const excelData = expenses.map(expense => ({
+  'Category': expense.name,
+  'Amount (INR)': expense.amount,
+  [`Amount (${selectedCurrency})`]: convertCurrency(expense.amount),
+  'Transaction Count': expense.count,
+  'Formatted Amount': formatAmount(expense.amount)
+}));
 
     // Add total row
     const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
@@ -167,7 +210,7 @@ const ExpensesCard = () => {
 
     // Generate file name with selected month/year
     const monthName = monthOptions.find(m => m.value === selectedMonth)?.label || selectedMonth;
-    const fileName = `expenses-${monthName}-${selectedYear}.xlsx`;
+    const fileName = `expenses-${monthName}-${selectedYear}-${selectedCurrency}.xlsx`;
 
     // Download file
     XLSX.writeFile(wb, fileName);
@@ -189,13 +232,13 @@ const ExpensesCard = () => {
         <div className="w-full sm:w-auto">
           <h2 className="text-2xl font-bold text-gray-800 mb-3 sm:mb-3">Expenses</h2>
           
-          {/* Month/Year Selector */}
-          <div className="flex items-center gap-2 sm:gap-2">
+          {/* Month/Year/Currency Selector */}
+          <div className="flex items-center gap-2 sm:gap-2 flex-wrap">
             <Calendar size={16} className="text-gray-400 flex-shrink-0" />
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="appearance-none bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1 sm:flex-none"
+              className="appearance-none bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1 sm:flex-none min-w-[100px]"
             >
               {monthOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -206,7 +249,7 @@ const ExpensesCard = () => {
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
-              className="appearance-none bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1 sm:flex-none"
+              className="appearance-none bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1 sm:flex-none min-w-[80px]"
             >
               {generateYearOptions().map(year => (
                 <option key={year} value={year}>
@@ -214,9 +257,21 @@ const ExpensesCard = () => {
                 </option>
               ))}
             </select>
+            <select
+              value={selectedCurrency}
+              onChange={(e) => setSelectedCurrency(e.target.value)}
+              className="appearance-none bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1 sm:flex-none min-w-[80px]"
+              disabled={currenciesLoading}
+            >
+              {popularCurrencies.map(currency => (
+                <option key={currency.code} value={currency.code}>
+                  {currency.code}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
-        
+
         <button
           onClick={downloadExcel}
           disabled={expenses.length === 0}
