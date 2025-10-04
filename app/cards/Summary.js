@@ -10,6 +10,7 @@ function Summary() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
@@ -18,13 +19,29 @@ function Summary() {
     }).format(amount);
   };
 
-  const fetchSummaryData = async () => {
+ const fetchSummaryData = async () => {
     try {
-      setLoading(true);
+      // Only show loading spinner on initial load
+      if (isInitialLoad) {
+        setLoading(true);
+      }
       setError(null);
       
+      // Load cached data first (if available)
+      const cachedData = localStorage.getItem('summaryData');
+      if (cachedData) {
+        setData(JSON.parse(cachedData));
+        setLoading(false); // Hide spinner immediately when cache exists
+      }
+      
+      // Fetch fresh data in the background
       const summaryData = await getSummaryData();
       setData(summaryData);
+      
+      // Cache the fresh data
+      localStorage.setItem('summaryData', JSON.stringify(summaryData));
+      
+      setIsInitialLoad(false);
     } catch (err) {
       setError(err.message || 'Failed to fetch summary data');
       console.error('Summary fetch error:', err);
