@@ -249,7 +249,7 @@ const IncomeSourcesCard = () => {
         ) : incomeSources.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-gray-500 text-center">
-              <p>No income sources found</p>
+              <p className='font-bold'>No income sources found</p>
               <p className="text-xs mt-1">for {getSelectedMonthName()}</p>
             </div>
           </div>
