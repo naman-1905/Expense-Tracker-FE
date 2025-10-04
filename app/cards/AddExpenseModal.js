@@ -85,7 +85,15 @@ const AddExpenseModal = ({ isOpen, onClose, onAddExpense }) => {
       ratesData['inr'] = 1;
       
       // Get the base API URL from environment variable (Next.js format)
-      const baseApiUrl = process.env.NEXT_PUBLIC_CURRENCY_API
+      const baseApiUrl = process.env.NEXT_PUBLIC_CURRENCY_API;
+      
+      if (!baseApiUrl) {
+        console.error('NEXT_PUBLIC_CURRENCY_API not configured');
+        setExchangeRates({ inr: 1 });
+        setSelectedCurrency('inr');
+        setIsLoadingRates(false);
+        return;
+      }
       
       // Extract the base URL (remove /usd.json if present)
       const baseUrl = baseApiUrl.replace(/\/[a-z]{3}\.json$/, '');
@@ -98,8 +106,19 @@ const AddExpenseModal = ({ isOpen, onClose, onAddExpense }) => {
             const apiUrl = `${baseUrl}/${currency.code}.json`;
             const response = await fetch(apiUrl);
             const data = await response.json();
-            // Get the conversion rate from this currency to INR
-            ratesData[currency.code] = data[currency.code]['inr'];
+            
+            // FIX: Check the actual structure of the data
+            // The API might return: { [currency.code]: { inr: rate } }
+            // Or it might return: { inr: rate }
+            if (data && typeof data === 'object') {
+              if (data[currency.code] && data[currency.code]['inr']) {
+                ratesData[currency.code] = data[currency.code]['inr'];
+              } else if (data['inr']) {
+                ratesData[currency.code] = data['inr'];
+              } else {
+                console.warn(`Unexpected data structure for ${currency.code}:`, data);
+              }
+            }
           } catch (err) {
             console.error(`Error fetching rate for ${currency.code}:`, err);
           }
@@ -152,10 +171,8 @@ const AddExpenseModal = ({ isOpen, onClose, onAddExpense }) => {
       return;
     }
 
-    if (!amountInINR || amountInINR <= 0) {
-      setError('Invalid conversion amount');
-      return;
-    }
+    // FIX: Allow submission even if currency conversion isn't available
+    const finalAmount = amountInINR > 0 ? amountInINR : parseFloat(amount);
 
     setIsLoading(true);
     setError('');
@@ -163,10 +180,12 @@ const AddExpenseModal = ({ isOpen, onClose, onAddExpense }) => {
     try {
       const transactionData = {
         title: expenseTitle,
-        amount: parseFloat(amountInINR.toFixed(2)), // Send INR amount
+        amount: parseFloat(finalAmount.toFixed(2)), // Send INR amount
         type: 'expense',
         emoji: selectedEmoji
       };
+
+      console.log('Sending transaction data:', transactionData); // Debug log
 
       const result = await createTransaction(transactionData);
       
@@ -176,7 +195,7 @@ const AddExpenseModal = ({ isOpen, onClose, onAddExpense }) => {
 
       onClose();
       
-      const successMsg = `Expense "${expenseTitle}" of ₹${amountInINR.toFixed(2)} added successfully!`;
+      const successMsg = `Expense "${expenseTitle}" of ₹${finalAmount.toFixed(2)} added successfully!`;
       
       if (typeof window !== 'undefined') {
         if (window.toast) {
@@ -344,7 +363,7 @@ const AddExpenseModal = ({ isOpen, onClose, onAddExpense }) => {
               )}
               <p className="text-lg font-bold text-red-700">
                 <IndianRupee size={18} className="inline mr-1" />
-                Amount in INR: ₹{amountInINR.toFixed(2)}
+                Amount in INR: ₹{(amountInINR > 0 ? amountInINR : parseFloat(amount)).toFixed(2)}
               </p>
             </div>
           )}
@@ -401,7 +420,7 @@ const AddExpenseModal = ({ isOpen, onClose, onAddExpense }) => {
           <button
             onClick={handleAddExpense}
             className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-red-400 disabled:cursor-not-allowed flex items-center justify-center"
-            disabled={isLoading || isLoadingRates}
+            disabled={isLoading}
           >
             {isLoading ? (
               <>
