@@ -236,7 +236,7 @@ const IncomeChartCard = () => {
               {incomeData.length > 0 ? (
                 <>Total: ₹{totalIncome.toFixed(2)} • Last {incomeData.length} days with income</>
               ) : (
-                'No income in the last 10 days'
+                'No income added in the last 10 days'
               )}
             </p>
           </div>
@@ -256,8 +256,7 @@ const IncomeChartCard = () => {
           ) : (
             <div className="flex items-center justify-center h-full bg-gray-50 rounded-lg">
               <div className="text-center text-gray-500">
-                <p className="text-lg mb-2">📊</p>
-                <p>No income data to display</p>
+                <p className='font-bold'>No income data to display</p>
                 <p className="text-xs">Add some income to see the chart</p>
               </div>
             </div>
