@@ -6,9 +6,24 @@ import { getSummaryData } from '../api/utils/historyAPI';
 function FinanceOverview() {
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
-  const [loading, setLoading] = useState(true);
+  
+  // Initialize from localStorage if available
+  const getCachedData = () => {
+    try {
+      const cached = localStorage.getItem('financialOverviewData');
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (err) {
+      console.error('Error reading from localStorage:', err);
+    }
+    return null;
+  };
+
+  const cachedData = getCachedData();
+  const [loading, setLoading] = useState(!cachedData); // Only load if no cached data
   const [error, setError] = useState(null);
-  const [financialData, setFinancialData] = useState({
+  const [financialData, setFinancialData] = useState(cachedData || {
     totalIncome: 0,
     totalExpenses: 0,
     totalBalance: 0,
@@ -17,12 +32,18 @@ function FinanceOverview() {
 
   const fetchFinancialData = async () => {
     try {
-      setLoading(true);
       setError(null);
       
       const summaryData = await getSummaryData();
       setFinancialData(summaryData);
       setLastUpdated(new Date());
+      
+      // Save to localStorage
+      try {
+        localStorage.setItem('financialOverviewData', JSON.stringify(summaryData));
+      } catch (err) {
+        console.error('Error saving to localStorage:', err);
+      }
     } catch (err) {
       setError(err.message || 'Failed to fetch financial data');
       console.error('Finance Overview fetch error:', err);
@@ -372,8 +393,7 @@ function FinanceOverview() {
         </div>
       </div>
 
-{/* Future Upgrade, Insights with AI model */}
-
+      {/* Future Upgrade, Insights with AI model */}
       {/* Additional Insights
       {(financialData.totalIncome > 0 || financialData.totalExpenses > 0) && (
         <div className="mt-6 p-4 bg-gray-50 rounded-xl">
