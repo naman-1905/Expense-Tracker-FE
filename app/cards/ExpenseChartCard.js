@@ -236,8 +236,8 @@ const ExpenseChartCard = () => {
           ) : (
             <div className="flex items-center justify-center h-full bg-gray-50 rounded-lg">
               <div className="text-center text-gray-500">
-                <p className="text-lg mb-2">📊</p>
-                <p>No expense data to display</p>
+                <p className="text-lg mb-2"></p>
+                <p className='font-bold'>No expense data to display</p>
                 <p className="text-xs">Add some expenses to see the chart</p>
               </div>
             </div>
