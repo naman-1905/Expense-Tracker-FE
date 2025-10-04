@@ -187,7 +187,7 @@ const ExpensesCard = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 sm:p-6 pb-4 border-b border-gray-100">
         <div className="w-full sm:w-auto">
-          <h2 className="text-2xl font-bold text-gray-800 mb-3 sm:mb-0">Expenses</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3 sm:mb-3">Expenses</h2>
           
           {/* Month/Year Selector */}
           <div className="flex items-center gap-2 sm:gap-2">
