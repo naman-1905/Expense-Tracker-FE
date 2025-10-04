@@ -13,10 +13,18 @@ const IncomeChartCard = () => {
 
   // Fetch income data for the last 10 days
   const fetchIncomeData = async () => {
-    setLoading(true);
-    setError(null);
-    
     try {
+      setLoading(true);
+      setError(null);
+      
+      // Load cached data first
+      const cachedData = localStorage.getItem('incomeChartData');
+      if (cachedData) {
+        setIncomeData(JSON.parse(cachedData));
+        setLoading(false);
+      }
+      
+      // Fetch fresh data in background
       const data = await getRecentTransactions(10, 100);
       
       // Filter only income and group by date
@@ -38,6 +46,9 @@ const IncomeChartCard = () => {
         .sort((a, b) => new Date(a.date) - new Date(b.date));
 
       setIncomeData(chartData);
+      
+      // Cache the fresh data
+      localStorage.setItem('incomeChartData', JSON.stringify(chartData));
     } catch (err) {
       setError(err.message);
       console.error('Error fetching income data:', err);
@@ -189,7 +200,7 @@ const IncomeChartCard = () => {
 
   const totalIncome = incomeData.reduce((sum, item) => sum + item.amount, 0);
 
-  if (loading) {
+  if (loading && incomeData.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 transition-shadow duration-300 h-96 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -197,7 +208,7 @@ const IncomeChartCard = () => {
     );
   }
 
-  if (error) {
+  if (error && incomeData.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 transition-shadow duration-300 h-96 flex items-center justify-center">
         <div className="text-blue-500 text-center">
