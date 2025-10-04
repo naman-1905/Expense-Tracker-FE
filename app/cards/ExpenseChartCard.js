@@ -13,10 +13,18 @@ const ExpenseChartCard = () => {
 
   // Fetch expense data for the last 10 days
   const fetchExpenseData = async () => {
-    setLoading(true);
-    setError(null);
-    
     try {
+      setLoading(true);
+      setError(null);
+      
+      // Load cached data first
+      const cachedData = localStorage.getItem('expenseChartData');
+      if (cachedData) {
+        setExpenseData(JSON.parse(cachedData));
+        setLoading(false);
+      }
+      
+      // Fetch fresh data in background
       const data = await getRecentTransactions(10, 100);
       
       // Filter only expenses and group by date
@@ -38,6 +46,9 @@ const ExpenseChartCard = () => {
         .sort((a, b) => new Date(a.date) - new Date(b.date));
 
       setExpenseData(chartData);
+      
+      // Cache the fresh data
+      localStorage.setItem('expenseChartData', JSON.stringify(chartData));
     } catch (err) {
       setError(err.message);
       console.error('Error fetching expense data:', err);
@@ -169,7 +180,7 @@ const ExpenseChartCard = () => {
 
   const totalExpenses = expenseData.reduce((sum, item) => sum + item.amount, 0);
 
-  if (loading) {
+  if (loading && expenseData.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 transition-shadow duration-300 h-96 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
@@ -177,7 +188,7 @@ const ExpenseChartCard = () => {
     );
   }
 
-  if (error) {
+  if (error && expenseData.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 transition-shadow duration-300 h-96 flex items-center justify-center">
         <div className="text-red-500 text-center">
