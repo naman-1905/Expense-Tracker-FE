@@ -249,7 +249,7 @@ const ExpensesCard = () => {
         ) : expenses.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-gray-500 text-center">
-              <p>No expenses found</p>
+              <p className='font-bold'>No expenses found</p>
               <p className="text-xs mt-1">for {getSelectedMonthName()}</p>
             </div>
           </div>
