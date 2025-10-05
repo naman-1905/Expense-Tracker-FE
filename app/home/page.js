@@ -1,11 +1,12 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { User, BarChart3, TrendingUp, TrendingDown, LogOut, Menu, X } from 'lucide-react';
+import { User, BarChart3, TrendingUp, TrendingDown, LogOut, Menu, X, DollarSign } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { authService, tokenManager } from '../api/lib/auth';
 import DashboardLayout from '../screens/DashboardLayout';
 import IncomeLayout from '../screens/IncomeLayout';
-import ExpenseLayout from '../screens/ExpenseLayout'; 
+import ExpenseLayout from '../screens/ExpenseLayout';
+import { useCurrency } from '../context/CurrencyContext';
 
 const Dashboard = () => {
   return (
@@ -37,30 +38,27 @@ function Home() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { selectedCurrency, changeCurrency, currencies, getCurrencySymbol } = useCurrency();
 
   useEffect(() => {
     const initializeUser = async () => {
       try {
-        // Check if user is authenticated
         if (!tokenManager.isAuthenticated()) {
           router.push('/login');
           return;
         }
 
-        // Get user data from localStorage first
         const storedUserData = tokenManager.getUserData();
         if (storedUserData) {
           setUser(storedUserData);
           setLoading(false);
         } else {
-          // Fetch user profile if not in localStorage
           try {
             const profileResponse = await authService.getProfile();
             setUser(profileResponse.user);
             setLoading(false);
           } catch (error) {
             console.error('Error fetching user profile:', error);
-            // If authentication fails, redirect to login
             router.push('/login');
           }
         }
@@ -106,7 +104,6 @@ function Home() {
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [isSidebarOpen]);
 
-  // Show loading spinner while checking authentication
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -209,6 +206,30 @@ function Home() {
               </button>
             </li>
           </ul>
+
+          {/* Currency Switcher */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <label className="block text-xs font-medium text-gray-500 mb-2 px-3">
+              Display Currency
+            </label>
+            <div className="relative">
+              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <select
+                value={selectedCurrency}
+                onChange={(e) => changeCurrency(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
+              >
+                {currencies.map((currency) => (
+                  <option key={currency.code} value={currency.code}>
+                    {currency.symbol} {currency.code} - {currency.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="text-xs text-gray-400 mt-2 px-3">
+              All amounts will be displayed in {selectedCurrency}
+            </p>
+          </div>
         </nav>
 
         {/* Logout Button */}
