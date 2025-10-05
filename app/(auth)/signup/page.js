@@ -168,7 +168,7 @@ function SignUp() {
               />
             </div>
 
-            <div className="flex items-center">
+            {/* <div className="flex items-center">
               <input
                 type="checkbox"
                 id="terms"
@@ -182,7 +182,7 @@ function SignUp() {
                   Terms and Conditions
                 </a>
               </label>
-            </div>
+            </div> */}
 
             <button
               type="submit"
