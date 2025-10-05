@@ -141,7 +141,7 @@ function Login() {
               />
             </div>
 
-            {/* Remember Me & Forgot Password */}
+            {/* Remember Me & Forgot Password
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <input
@@ -156,7 +156,7 @@ function Login() {
               <a href="#" className="text-sm text-purple-600 hover:text-purple-700 font-medium transition-colors">
                 Forgot password?
               </a>
-            </div>
+            </div> */}
 
             {/* Login Button */}
             <button
