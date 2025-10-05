@@ -5,13 +5,18 @@ import { createTransaction } from '../api/utils/transactionAPI';
 const EMOJIS = ['💰', '🍔', '🚗', '🎁', '🛒', '💳', '🏠', '🎉', '📦', '⚡'];
 
 const CURRENCIES = [
-  { code: 'inr', symbol: '₹', name: 'Indian Rupee' },
+  { code: 'php', symbol: '₱', name: 'Philippine Peso' },
+  { code: 'idr', symbol: 'Rp', name: 'Indonesian Rupiah' },
+  { code: 'myr', symbol: 'RM', name: 'Malaysian Ringgit' },
+  { code: 'thb', symbol: '฿', name: 'Thai Baht' },
+  { code: 'vnd', symbol: '₫', name: 'Vietnamese Dong' },
   { code: 'usd', symbol: '$', name: 'US Dollar' },
+  { code: 'cad', symbol: 'C$', name: 'Canadian Dollar' },
+  { code: 'jpy', symbol: '¥', name: 'Japanese Yen' },
+  { code: 'inr', symbol: '₹', name: 'Indian Rupee' },
   { code: 'eur', symbol: '€', name: 'Euro' },
   { code: 'gbp', symbol: '£', name: 'British Pound' },
-  { code: 'jpy', symbol: '¥', name: 'Japanese Yen' },
   { code: 'aud', symbol: 'A$', name: 'Australian Dollar' },
-  { code: 'cad', symbol: 'C$', name: 'Canadian Dollar' },
   { code: 'chf', symbol: 'Fr', name: 'Swiss Franc' },
   { code: 'cny', symbol: '¥', name: 'Chinese Yuan' },
   { code: 'aed', symbol: 'د.إ', name: 'UAE Dirham' },

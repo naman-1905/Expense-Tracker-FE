@@ -66,18 +66,23 @@ const ExpensesCard = () => {
     { value: '12', label: 'December' }
   ];
 
-  const popularCurrencies = [
-  { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
-  { code: 'USD', name: 'US Dollar', symbol: '$' },
-  { code: 'EUR', name: 'Euro', symbol: '€' },
-  { code: 'GBP', name: 'British Pound', symbol: '£' },
-  { code: 'JPY', name: 'Japanese Yen', symbol: '¥' },
-  { code: 'AUD', name: 'Australian Dollar', symbol: 'A$' },
-  { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$' },
-  { code: 'CHF', name: 'Swiss Franc', symbol: 'Fr' },
-  { code: 'CNY', name: 'Chinese Yuan', symbol: '¥' },
-  { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$' }
-];
+const popularCurrencies = [
+    { code: 'PHP', name: 'Philippine Peso', symbol: '₱' },
+    { code: 'IDR', name: 'Indonesian Rupiah', symbol: 'Rp' },
+    { code: 'MYR', name: 'Malaysian Ringgit', symbol: 'RM' },
+    { code: 'THB', name: 'Thai Baht', symbol: '฿' },
+    { code: 'VND', name: 'Vietnamese Dong', symbol: '₫' },
+    { code: 'USD', name: 'US Dollar', symbol: '$' },
+    { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$' },
+    { code: 'JPY', name: 'Japanese Yen', symbol: '¥' },
+    { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
+    { code: 'EUR', name: 'Euro', symbol: '€' },
+    { code: 'GBP', name: 'British Pound', symbol: '£' },
+    { code: 'AUD', name: 'Australian Dollar', symbol: 'A$' },
+    { code: 'CHF', name: 'Swiss Franc', symbol: 'Fr' },
+    { code: 'CNY', name: 'Chinese Yuan', symbol: '¥' },
+    { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$' }
+  ];
 
   // Get date range for selected month/year
   const getMonthDateRange = (month, year) => {
