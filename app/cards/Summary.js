@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, TrendingUp, TrendingDown, RefreshCw, Loader, AlertCircle } from 'lucide-react';
 import { getSummaryData } from '../api/utils/historyAPI';
+import { useCurrency } from '../context/CurrencyContext';
 
 function Summary() {
   const [data, setData] = useState({
@@ -11,34 +12,24 @@ function Summary() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const { formatAmount } = useCurrency();
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR'
-    }).format(amount);
-  };
-
- const fetchSummaryData = async () => {
+  const fetchSummaryData = async () => {
     try {
-      // Only show loading spinner on initial load
       if (isInitialLoad) {
         setLoading(true);
       }
       setError(null);
       
-      // Load cached data first (if available)
       const cachedData = localStorage.getItem('summaryData');
       if (cachedData) {
         setData(JSON.parse(cachedData));
-        setLoading(false); // Hide spinner immediately when cache exists
+        setLoading(false);
       }
       
-      // Fetch fresh data in the background
       const summaryData = await getSummaryData();
       setData(summaryData);
       
-      // Cache the fresh data
       localStorage.setItem('summaryData', JSON.stringify(summaryData));
       
       setIsInitialLoad(false);
@@ -54,7 +45,6 @@ function Summary() {
     fetchSummaryData();
   };
 
-  // Fetch data on component mount
   useEffect(() => {
     fetchSummaryData();
   }, []);
@@ -130,7 +120,7 @@ function Summary() {
                   <p className={`text-2xl font-bold ${
                     data.totalBalance >= 0 ? 'text-green-600' : 'text-red-600'
                   }`}>
-                    {formatCurrency(data.totalBalance)}
+                    {formatAmount(data.totalBalance)}
                   </p>
                   {data.totalBalance < 0 && (
                     <p className="text-xs text-red-500 mt-1">Deficit</p>
@@ -152,7 +142,7 @@ function Summary() {
                 <div>
                   <p className="text-sm font-medium text-gray-500 mb-1">Total Income</p>
                   <p className="text-2xl font-bold text-green-600">
-                    {formatCurrency(data.totalIncome)}
+                    {formatAmount(data.totalIncome)}
                   </p>
                   <p className="text-xs text-gray-400 mt-1">All time</p>
                 </div>
@@ -168,7 +158,7 @@ function Summary() {
                 <div>
                   <p className="text-sm font-medium text-gray-500 mb-1">Total Expenses</p>
                   <p className="text-2xl font-bold text-red-600">
-                    {formatCurrency(data.totalExpenses)}
+                    {formatAmount(data.totalExpenses)}
                   </p>
                   <p className="text-xs text-gray-400 mt-1">All time</p>
                 </div>
