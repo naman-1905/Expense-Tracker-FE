@@ -2,10 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import Chart from 'chart.js/auto';
 import { Loader, RefreshCw, AlertCircle } from 'lucide-react';
 import { getSummaryData } from '../api/utils/historyAPI';
+import { useCurrency } from '../context/CurrencyContext';
 
 function FinanceOverview() {
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
+  const { formatAmount, convertFromINR, getCurrencySymbol } = useCurrency();
   
   // Initialize from localStorage if available
   const getCachedData = () => {
@@ -21,7 +23,7 @@ function FinanceOverview() {
   };
 
   const cachedData = getCachedData();
-  const [loading, setLoading] = useState(!cachedData); // Only load if no cached data
+  const [loading, setLoading] = useState(!cachedData);
   const [error, setError] = useState(null);
   const [financialData, setFinancialData] = useState(cachedData || {
     totalIncome: 0,
@@ -38,7 +40,6 @@ function FinanceOverview() {
       setFinancialData(summaryData);
       setLastUpdated(new Date());
       
-      // Save to localStorage
       try {
         localStorage.setItem('financialOverviewData', JSON.stringify(summaryData));
       } catch (err) {
@@ -60,14 +61,6 @@ function FinanceOverview() {
     fetchFinancialData();
   }, []);
 
-  const formatCurrency = (value) =>
-    new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(Math.abs(value));
-
   useEffect(() => {
     if (loading || error) return;
 
@@ -88,19 +81,22 @@ function FinanceOverview() {
     const incomeGradient = createGradient(ctx, '#10B981', '#059669');
     const expensesGradient = createGradient(ctx, '#EF4444', '#DC2626');
 
-    // Prepare data for chart - only show income and expenses for meaningful visualization
+    // Prepare data for chart - convert to selected currency
     const chartData = [];
     const chartLabels = [];
     const chartColors = [];
 
+    const convertedIncome = convertFromINR(financialData.totalIncome);
+    const convertedExpenses = convertFromINR(financialData.totalExpenses);
+
     if (financialData.totalIncome > 0) {
-      chartData.push(financialData.totalIncome);
+      chartData.push(convertedIncome);
       chartLabels.push('Income');
       chartColors.push(incomeGradient);
     }
 
     if (financialData.totalExpenses > 0) {
-      chartData.push(financialData.totalExpenses);
+      chartData.push(convertedExpenses);
       chartLabels.push('Expenses');
       chartColors.push(expensesGradient);
     }
@@ -111,6 +107,8 @@ function FinanceOverview() {
       chartLabels.push('No Data');
       chartColors.push('#E5E7EB');
     }
+
+    const currencySymbol = getCurrencySymbol();
 
     chartInstance.current = new Chart(ctx, {
       type: 'doughnut',
@@ -164,7 +162,10 @@ function FinanceOverview() {
               label: function (context) {
                 const value = context.parsed;
                 const percentage = ((value / chartData.reduce((a, b) => a + b, 0)) * 100).toFixed(1);
-                return [formatCurrency(value), `${percentage}% of total`];
+                return [
+                  `${currencySymbol}${value.toFixed(2)}`,
+                  `${percentage}% of total`
+                ];
               },
               labelColor: function(context) {
                 const colors = ['#10B981', '#EF4444', '#3B82F6'];
@@ -212,7 +213,7 @@ function FinanceOverview() {
     return () => {
       chartInstance.current?.destroy();
     };
-  }, [loading, error, financialData.totalIncome, financialData.totalExpenses]);
+  }, [loading, error, financialData.totalIncome, financialData.totalExpenses, convertFromINR, getCurrencySymbol]);
 
   if (loading) {
     return (
@@ -282,7 +283,7 @@ function FinanceOverview() {
               <p className={`text-3xl font-bold ${
                 netWorth >= 0 ? 'text-green-600' : 'text-red-600'
               }`}>
-                {formatCurrency(netWorth)}
+                {formatAmount(netWorth)}
               </p>
               <p className={`text-xs mt-1 ${
                 netWorth >= 0 ? 'text-green-500' : 'text-red-500'
@@ -319,7 +320,7 @@ function FinanceOverview() {
           <div className="text-center">
             <p className="text-sm font-medium text-green-600/80 mb-1">Total Income</p>
             <p className="text-xl font-bold text-green-700">
-              {formatCurrency(financialData.totalIncome)}
+              {formatAmount(financialData.totalIncome)}
             </p>
           </div>
         </div>
@@ -329,7 +330,7 @@ function FinanceOverview() {
           <div className="text-center">
             <p className="text-sm font-medium text-red-600/80 mb-1">Total Expenses</p>
             <p className="text-xl font-bold text-red-700">
-              {formatCurrency(financialData.totalExpenses)}
+              {formatAmount(financialData.totalExpenses)}
             </p>
           </div>
         </div>
@@ -349,7 +350,7 @@ function FinanceOverview() {
             <p className={`text-xl font-bold ${
               netWorth >= 0 ? 'text-blue-700' : 'text-red-700'
             }`}>
-              {formatCurrency(netWorth)}
+              {formatAmount(netWorth)}
             </p>
           </div>
         </div>
@@ -384,21 +385,6 @@ function FinanceOverview() {
           </div>
         </div>
       </div>
-
-      {/* Future Upgrade, Insights with AI model */}
-      {/* Additional Insights
-      {(financialData.totalIncome > 0 || financialData.totalExpenses > 0) && (
-        <div className="mt-6 p-4 bg-gray-50 rounded-xl">
-          <h4 className="text-sm font-semibold text-gray-700 mb-2">Financial Health</h4>
-          <div className="text-sm text-gray-600">
-            {netWorth >= 0 ? (
-              <p>✅ You're maintaining a positive balance. Keep up the good work!</p>
-            ) : (
-              <p>⚠️ You're spending more than you're earning. Consider reviewing your expenses.</p>
-            )}
-          </div>
-        </div>
-      )} */}
     </div>
   );
 }
