@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, Filter, Trash2 } from 'lucide-react';
 import { getRecentTransactions, getTransactionsDateRange } from '../api/utils/historyAPI';
 import { deleteTransaction } from '../api/utils/transactionAPI';
+import { useCurrency } from '../context/CurrencyContext';
 
 const TransactionCard = () => {
   const [transactions, setTransactions] = useState([]);
@@ -13,6 +14,7 @@ const TransactionCard = () => {
   const [endDate, setEndDate] = useState('');
   const [customDateMode, setCustomDateMode] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const { formatAmount } = useCurrency();
 
   // Period options
   const periodOptions = [
@@ -92,16 +94,6 @@ const TransactionCard = () => {
       fetchTransactions();
       setShowDatePicker(false);
     }
-  };
-
-  // Format amount
-  const formatAmount = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2
-    }).format(Math.abs(amount));
   };
 
   // Format date
