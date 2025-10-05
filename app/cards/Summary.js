@@ -92,7 +92,7 @@ function Summary() {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-800">Financial Summary</h2>
+        <h2 className="text-xl font-bold text-gray-800">Financial Summary</h2>
         <button
           onClick={handleRefresh}
           disabled={loading}
