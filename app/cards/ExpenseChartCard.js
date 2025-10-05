@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as Chart from 'chart.js';
 import { getRecentTransactions } from '../api/utils/historyAPI';
 import AddExpenseModal from './AddExpenseModal';
+import { useCurrency } from '../context/CurrencyContext';
 
 const ExpenseChartCard = () => {
   const chartRef = useRef(null);
@@ -10,6 +11,7 @@ const ExpenseChartCard = () => {
   const [expenseData, setExpenseData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { formatAmount, convertFromINR, getCurrencySymbol } = useCurrency();
 
   // Fetch expense data for the last 10 days
   const fetchExpenseData = async () => {
@@ -92,6 +94,7 @@ const ExpenseChartCard = () => {
     }
 
     const ctx = chartRef.current.getContext('2d');
+    const currencySymbol = getCurrencySymbol();
     
     chartInstance.current = new Chart.Chart(ctx, {
       type: 'line',
@@ -99,7 +102,7 @@ const ExpenseChartCard = () => {
         labels: expenseData.map(item => formatDate(item.date)),
         datasets: [{
           label: 'Daily Expenses',
-          data: expenseData.map(item => item.amount),
+          data: expenseData.map(item => convertFromINR(item.amount)),
           fill: false,
           borderColor: 'rgba(239, 68, 68, 1)',
           backgroundColor: 'rgba(239, 68, 68, 0.8)',
@@ -122,7 +125,7 @@ const ExpenseChartCard = () => {
             borderColor: 'rgba(239, 68, 68, 1)',
             borderWidth: 1,
             callbacks: {
-              label: (context) => `Expense: ₹${context.parsed.y.toFixed(2)}`
+              label: (context) => `Expense: ${currencySymbol}${context.parsed.y.toFixed(2)}`
             }
           }
         },
@@ -132,7 +135,7 @@ const ExpenseChartCard = () => {
             ticks: {
               color: '#6b7280',
               font: { size: 14 },
-              callback: (value) => `₹${value}`
+              callback: (value) => `${currencySymbol}${value}`
             },
             grid: { color: 'rgba(229, 231, 235, 0.5)' },
             border: { display: false },
@@ -166,7 +169,7 @@ const ExpenseChartCard = () => {
         chartInstance.current.destroy();
       }
     };
-  }, [expenseData]);
+  }, [expenseData, convertFromINR, getCurrencySymbol]);
 
   const handleAddExpense = () => {
     setShowModal(true);
@@ -214,7 +217,7 @@ const ExpenseChartCard = () => {
             <h2 className="text-2xl font-bold text-gray-800">Expense Overview</h2>
             <p className="text-sm text-gray-600 mt-1">
               {expenseData.length > 0 ? (
-                <>Total: ₹{totalExpenses.toFixed(2)} • Last {expenseData.length} days with expenses</>
+                <>Total: {formatAmount(totalExpenses)} • Last {expenseData.length} days with expenses</>
               ) : (
                 'No expenses in the last 10 days'
               )}
