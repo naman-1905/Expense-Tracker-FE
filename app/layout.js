@@ -1,4 +1,4 @@
-import { Geist, Poppins } from "next/font/google";
+import { Geist, Manrope } from "next/font/google";
 import "./globals.css";
 import { CurrencyProvider } from './context/CurrencyContext'
 
@@ -7,10 +7,10 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-const poppins = Poppins({
-  variable: "--font-poppins",
+const manrope = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800", "900"],
+  weight: ["300", "400", "500", "600", "700", "800"],
 });
 
 export const metadata = {
@@ -22,7 +22,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${poppins.variable} antialiased`}
+        className={`${geistSans.variable} ${manrope.variable} antialiased`}
       >
         <CurrencyProvider>
         {children}
