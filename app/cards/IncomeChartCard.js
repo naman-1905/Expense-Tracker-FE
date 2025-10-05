@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as Chart from 'chart.js';
 import { getRecentTransactions } from '../api/utils/historyAPI';
 import AddIncomeModal from './AddIncomeModal';
+import { useCurrency } from '../context/CurrencyContext';
 
 const IncomeChartCard = () => {
   const chartRef = useRef(null);
@@ -10,6 +11,7 @@ const IncomeChartCard = () => {
   const [incomeData, setIncomeData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { formatAmount, convertFromINR, getCurrencySymbol } = useCurrency();
 
   // Fetch income data for the last 10 days
   const fetchIncomeData = async () => {
@@ -93,6 +95,7 @@ const IncomeChartCard = () => {
     }
 
     const ctx = chartRef.current.getContext('2d');
+    const currencySymbol = getCurrencySymbol();
     
     chartInstance.current = new Chart.Chart(ctx, {
       type: 'bar',
@@ -100,7 +103,7 @@ const IncomeChartCard = () => {
         labels: incomeData.map(item => formatDate(item.date)),
         datasets: [{
           label: 'Daily Income',
-          data: incomeData.map(item => item.amount),
+          data: incomeData.map(item => convertFromINR(item.amount)),
           backgroundColor: 'rgba(59, 130, 246, 0.6)',
           borderColor: 'rgba(59, 130, 246, 1)',
           borderWidth: 1,
@@ -123,7 +126,7 @@ const IncomeChartCard = () => {
             borderWidth: 1,
             callbacks: {
               label: function(context) {
-                return `Income: ₹${context.parsed.y.toFixed(2)}`;
+                return `Income: ${currencySymbol}${context.parsed.y.toFixed(2)}`;
               }
             }
           }
@@ -133,7 +136,7 @@ const IncomeChartCard = () => {
             beginAtZero: true,
             ticks: {
               callback: function(value) {
-                return `₹${value}`;
+                return `${currencySymbol}${value}`;
               },
               color: '#6b7280',
               font: {
@@ -186,7 +189,7 @@ const IncomeChartCard = () => {
         chartInstance.current.destroy();
       }
     };
-  }, [incomeData]);
+  }, [incomeData, convertFromINR, getCurrencySymbol]);
 
   const handleAddIncome = () => {
     setShowModal(true);
@@ -234,7 +237,7 @@ const IncomeChartCard = () => {
             <h2 className="text-2xl font-bold text-gray-800">Income Overview</h2>
             <p className="text-sm text-gray-600 mt-1">
               {incomeData.length > 0 ? (
-                <>Total: ₹{totalIncome.toFixed(2)} • Last {incomeData.length} days with income</>
+                <>Total: {formatAmount(totalIncome)} • Last {incomeData.length} days with income</>
               ) : (
                 'No income added in the last 10 days'
               )}
