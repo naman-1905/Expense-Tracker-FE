@@ -1,5 +1,6 @@
 import { Geist, Poppins } from "next/font/google";
 import "./globals.css";
+import { CurrencyProvider } from './context/CurrencyContext'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,7 +24,9 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${poppins.variable} antialiased`}
       >
+        <CurrencyProvider>
         {children}
+        </CurrencyProvider>
       </body>
     </html>
   );
