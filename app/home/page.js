@@ -1,11 +1,12 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { User, BarChart3, TrendingUp, TrendingDown, LogOut, Menu, X, DollarSign } from 'lucide-react';
+import { User, BarChart3, TrendingUp, TrendingDown, LogOut, Menu, X, DollarSign, PiggyBank } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { authService, tokenManager } from '../api/lib/auth';
 import DashboardLayout from '../screens/DashboardLayout';
 import IncomeLayout from '../screens/IncomeLayout';
 import ExpenseLayout from '../screens/ExpenseLayout';
+import SavingsLayout from '../screens/SavingsLayout';
 import { useCurrency } from '../context/CurrencyContext';
 
 const Dashboard = () => {
@@ -28,6 +29,14 @@ const Expense = () => {
   return (
     <div className="p-4 md:p-8">
         <ExpenseLayout/>
+    </div>
+  );
+};
+
+const Savings = () => {
+  return (
+    <div className="p-4 md:p-8">
+        <SavingsLayout/>
     </div>
   );
 };
@@ -79,6 +88,8 @@ function Home() {
         return <Income />;
       case 'expense':
         return <Expense />;
+      case 'savings':
+        return <Savings />;
       default:
         return <Dashboard />;
     }
@@ -164,7 +175,7 @@ function Home() {
         </div>
 
         {/* Navigation */}
-        <nav className="p-3 md:p-4 flex-1">
+        <nav className="p-3 md:p-4 flex-1 overflow-y-auto">
           <ul className="space-y-2">
             <li>
               <button
@@ -205,6 +216,19 @@ function Home() {
                 <span className="font-medium">Expense</span>
               </button>
             </li>
+            <li>
+              <button
+                onClick={() => handleNavClick('savings')}
+                className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-lg text-left transition-colors ${
+                  activeSection === 'savings'
+                    ? 'bg-purple-100 text-purple-700 border-r-4 border-purple-700'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <PiggyBank className="w-5 h-5 flex-shrink-0" />
+                <span className="font-medium">Piggy Bank</span>
+              </button>
+            </li>
           </ul>
 
           {/* Currency Switcher */}
@@ -233,7 +257,7 @@ function Home() {
         </nav>
 
         {/* Logout Button */}
-        <div className="p-3 md:p-4">
+        <div className="p-3 md:p-4 border-t border-gray-200">
           <button
             onClick={handleLogout}
             className="w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-lg text-left text-red-600 hover:bg-red-50 transition-colors"
