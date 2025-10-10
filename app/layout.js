@@ -14,8 +14,8 @@ const manrope = Manrope({
 });
 
 export const metadata = {
-  title: "Expense Tracker",
-  description: "A simple expense tracker made with Next.js and Tailwind CSS",
+  title: "Naman's Finance Tracker",
+  description: "A not so simple expense tracker from Naman Chaturvedi",
 };
 
 export default function RootLayout({ children }) {
