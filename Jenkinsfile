@@ -3,43 +3,35 @@ pipeline {
 
     parameters {
         choice(
-            name: 'REGISTRY_OPTION',
-            choices: ['Kshitiz Container (100.94.112.9:5000)', 'Naman Container (100.121.35.107:5000)'],
-            description: 'Select which registry to push the image to'
-        )
-        choice(
-            name: 'DEPLOY_HOST',
-            choices: ['100.94.112.9', '100.121.35.107', 'both'],
+            name: 'DEPLOY_TARGET',
+            choices: ['both', 'kahitoz', 'naman'],
             description: 'Select where to deploy the container'
         )
     }
 
     environment {
-        IMAGE_NAME     = "halfskirmish-expenses"
-        CONTAINER_NAME = "halfskirmish-expenses"
-        NETWORK        = "app"
+        IMAGE_NAME = 'halfskirmish-expenses'
+        IMAGE_TAG = 'latest'
+        BUILD_REGISTRY = 'registrypush.kahitoz.com:5000'
+        DEPLOY_REGISTRY = 'registry.kahitoz.com'
+
+        KAHITOZ_DOCKER_HOST = 'tcp://kahitozrunner:2375'
+        NAMAN_DOCKER_HOST = 'tcp://naman:2375'
+
+        CONTAINER_NAME = 'halfskirmish-expenses'
+        NETWORK_NAME = 'app'
     }
 
     stages {
-        stage('Set Registry') {
-            steps {
-                script {
-                    if (params.REGISTRY_OPTION == 'Kshitiz Container (100.94.112.9:5000)') {
-                        env.REGISTRY = "100.94.112.9:5000"
-                    } else {
-                        env.REGISTRY = "100.121.35.107:5000"
-                    }
-                }
-            }
-        }
 
         stage('Prepare Environment Files') {
             steps {
                 script {
-                    // Remove all .env.* files (like .env.local, .env.dev, etc.)
-                    sh "rm -f .env.*"
-
-                    // Ensure only .env is used
+                    echo "Preparing environment files..."
+                    sh """
+                        rm -f .env.* || true
+                    """
+                    
                     if (!fileExists('.env')) {
                         error(".env file not found in the project directory!")
                     }
@@ -50,39 +42,116 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
+                    echo "Building Docker image: ${IMAGE_NAME}:${IMAGE_TAG}"
                     sh """
-                        docker build -t \$IMAGE_NAME .
-                        docker tag \$IMAGE_NAME \$REGISTRY/\$IMAGE_NAME
+                        docker build -t ${BUILD_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} .
                     """
                 }
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Push Docker Images') {
             steps {
-                sh "docker push \$REGISTRY/\$IMAGE_NAME"
+                script {
+                    echo "Logging into Docker registries..."
+                    withCredentials([usernamePassword(credentialsId: 'docker_creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                        sh '''
+                            echo "$DOCKER_PASS" | docker login ''' + BUILD_REGISTRY + ''' -u "$DOCKER_USER" --password-stdin
+                            echo "$DOCKER_PASS" | docker login ''' + DEPLOY_REGISTRY + ''' -u "$DOCKER_USER" --password-stdin
+                        '''
+                    }
+
+                    echo "Pushing image to ${BUILD_REGISTRY}..."
+                    sh """
+                        docker push ${BUILD_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
+                    """
+
+                    echo "Re-tagging and pushing to ${DEPLOY_REGISTRY}..."
+                    sh """
+                        docker tag ${BUILD_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} ${DEPLOY_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
+                        docker push ${DEPLOY_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
+                    """
+
+                    echo "Logout from registries"
+                    sh """
+                        docker logout ${BUILD_REGISTRY} || true
+                        docker logout ${DEPLOY_REGISTRY} || true
+                    """
+                }
             }
         }
 
-        stage('Deploy Container') {
-            steps {
-                script {
-                    def deployHosts = []
-                    if (params.DEPLOY_HOST == 'both') {
-                        deployHosts = ['100.94.112.9', '100.121.35.107']
-                    } else {
-                        deployHosts = [params.DEPLOY_HOST]
-                    }
+        stage('Deploy to Docker Hosts') {
+            parallel {
 
-                    for (host in deployHosts) {
-                        sh """
-                            docker -H tcp://$host:2375 pull $REGISTRY/$IMAGE_NAME
-                            docker -H tcp://$host:2375 stop $CONTAINER_NAME || true
-                            docker -H tcp://$host:2375 rm $CONTAINER_NAME || true
-                            docker -H tcp://$host:2375 run -d --name $CONTAINER_NAME --network $NETWORK $REGISTRY/$IMAGE_NAME
-                        """
+                stage('Deploy to Kahitoz') {
+                    when {
+                        anyOf {
+                            expression { params.DEPLOY_TARGET == 'both' }
+                            expression { params.DEPLOY_TARGET == 'kahitoz' }
+                        }
+                    }
+                    steps {
+                        script {
+                            echo "Deploying to Kahitoz Docker host..."
+                            withCredentials([usernamePassword(credentialsId: 'docker_creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                                sh '''
+                                    echo "$DOCKER_PASS" | DOCKER_HOST=''' + KAHITOZ_DOCKER_HOST + ''' docker login ''' + DEPLOY_REGISTRY + ''' -u "$DOCKER_USER" --password-stdin
+                                    DOCKER_HOST=''' + KAHITOZ_DOCKER_HOST + ''' docker stop ''' + CONTAINER_NAME + ''' || true
+                                    DOCKER_HOST=''' + KAHITOZ_DOCKER_HOST + ''' docker rm ''' + CONTAINER_NAME + ''' || true
+                                    DOCKER_HOST=''' + KAHITOZ_DOCKER_HOST + ''' docker pull ''' + DEPLOY_REGISTRY + '''/''' + IMAGE_NAME + ''':''' + IMAGE_TAG + '''
+                                    DOCKER_HOST=''' + KAHITOZ_DOCKER_HOST + ''' docker run -d \
+                                        --name ''' + CONTAINER_NAME + ''' \
+                                        --network ''' + NETWORK_NAME + ''' \
+                                        --restart always \
+                                        ''' + DEPLOY_REGISTRY + '''/''' + IMAGE_NAME + ''':''' + IMAGE_TAG + '''
+                                    DOCKER_HOST=''' + KAHITOZ_DOCKER_HOST + ''' docker logout ''' + DEPLOY_REGISTRY + ''' || true
+                                '''
+                            }
+                        }
                     }
                 }
+
+                stage('Deploy to Naman') {
+                    when {
+                        anyOf {
+                            expression { params.DEPLOY_TARGET == 'both' }
+                            expression { params.DEPLOY_TARGET == 'naman' }
+                        }
+                    }
+                    steps {
+                        script {
+                            echo "Deploying to Naman Docker host..."
+                            withCredentials([usernamePassword(credentialsId: 'docker_creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                                sh '''
+                                    echo "$DOCKER_PASS" | DOCKER_HOST=''' + NAMAN_DOCKER_HOST + ''' docker login ''' + DEPLOY_REGISTRY + ''' -u "$DOCKER_USER" --password-stdin
+                                    DOCKER_HOST=''' + NAMAN_DOCKER_HOST + ''' docker stop ''' + CONTAINER_NAME + ''' || true
+                                    DOCKER_HOST=''' + NAMAN_DOCKER_HOST + ''' docker rm ''' + CONTAINER_NAME + ''' || true
+                                    DOCKER_HOST=''' + NAMAN_DOCKER_HOST + ''' docker pull ''' + DEPLOY_REGISTRY + '''/''' + IMAGE_NAME + ''':''' + IMAGE_TAG + '''
+                                    DOCKER_HOST=''' + NAMAN_DOCKER_HOST + ''' docker run -d \
+                                        --name ''' + CONTAINER_NAME + ''' \
+                                        --network ''' + NETWORK_NAME + ''' \
+                                        --restart always \
+                                        ''' + DEPLOY_REGISTRY + '''/''' + IMAGE_NAME + ''':''' + IMAGE_TAG + '''
+                                    DOCKER_HOST=''' + NAMAN_DOCKER_HOST + ''' docker logout ''' + DEPLOY_REGISTRY + ''' || true
+                                '''
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        cleanup {
+            script {
+                echo "Cleaning up local Docker images..."
+                sh """
+                    docker rmi ${BUILD_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} || true
+                    docker rmi ${DEPLOY_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} || true
+                    docker system prune -f || true
+                """
             }
         }
     }
