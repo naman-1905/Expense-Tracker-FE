@@ -1,37 +1,140 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Expense Tracker Frontend (Next.js)
 
-## Getting Started
+This is the **Next.js frontend** for the Expense Tracker platform.
 
-First, run the development server:
+It connects to the polyglot backend consisting of:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+* Express Auth Service
+* FastAPI CRUD Service
+* Flask History Service
+
+---
+
+## 📁 Project Structure
+
+Key directories:
+
+```
+app/
+ ├── (auth)/
+ ├── api/
+ │    ├── auth/
+ │    ├── lib/
+ │    └── utils/
+ ├── cards/
+ ├── context/
+ ├── home/
+ ├── hooks/
+ ├── screens/
+
+public/
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## ⚙️ Environment Setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The application requires environment variables to connect with backend services.
 
-## Learn More
+Create a `.env` file in the root:
 
-To learn more about Next.js, take a look at the following resources:
+```
+Expense-Tracker-FE/.env
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🔑 Required Environment Variables
 
-## Deploy on Vercel
+Add the following:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+NEXT_PUBLIC_AUTH_API=
+NEXT_PUBLIC_CRUD_API=
+NEXT_PUBLIC_HISTORY_API=
+NEXT_PUBLIC_CURRENCY_API=
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# Expense-Tracker-FE
+---
+
+## 🧪 Example (Production)
+
+```
+NEXT_PUBLIC_AUTH_API=https://authexpenses.halfskirmish.com
+NEXT_PUBLIC_CRUD_API=https://crudexpenses.halfskirmish.com
+NEXT_PUBLIC_HISTORY_API=https://historyexpenses.halfskirmish.com
+NEXT_PUBLIC_CURRENCY_API=https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json
+```
+
+---
+
+## 🧑‍💻 Local Development Example
+
+```
+NEXT_PUBLIC_AUTH_API=http://localhost:8001
+NEXT_PUBLIC_CRUD_API=http://localhost:8000
+NEXT_PUBLIC_HISTORY_API=http://localhost:8002
+NEXT_PUBLIC_CURRENCY_API=https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json
+```
+
+---
+
+## 🚀 Running Locally
+
+Install dependencies:
+
+```
+npm install
+```
+
+Run dev server:
+
+```
+npm run dev
+```
+
+App runs at:
+
+```
+http://localhost:3000
+```
+
+---
+
+## 🔗 Backend Dependency
+
+Make sure all backend services are running:
+
+| Service       | Port |
+| ------------- | ---- |
+| Express Auth  | 8001 |
+| FastAPI CRUD  | 8000 |
+| Flask History | 8002 |
+
+---
+
+## 🐳 Docker Support
+
+A Dockerfile is included for containerized deployment.
+
+---
+
+## 🧠 Features
+
+* Auth Flow (Login / Signup / Refresh / Profile)
+* Expense & Income Tracking
+* Charts & Financial Overview
+* Transaction History
+* Currency Conversion Support
+
+---
+
+## 📌 Notes
+
+* `NEXT_PUBLIC_*` variables are exposed to the browser.
+* Ensure backend URLs are correct.
+* `.env` should not be committed to version control.
+
+---
+
+You're ready to run the Expense Tracker Frontend 
