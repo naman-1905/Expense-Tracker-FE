@@ -111,7 +111,6 @@ function SavingsTargetCard() {
       <div className="flex items-end justify-between mb-2">
         {/* Saved so far for the period */}
         <div>
-          <p className="text-xs text-gray-400 font-medium mb-0.5">Saved in period</p>
           <div className="flex items-center gap-1.5">
             <span className="text-2xl font-bold text-gray-800">
               {formatAmount(periodTotal)}
