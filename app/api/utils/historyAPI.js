@@ -13,7 +13,7 @@ const createHeaders = () => {
   const token = getAuthToken();
   return {
     'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
+    ...(token && { 'Authorization': `Bearer ${token}` })
   };
 };
 
@@ -21,18 +21,16 @@ const createHeaders = () => {
 const handleResponse = async (response) => {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.message || errorData.error || `HTTP error! status: ${response.status}`
-    );
+    throw new Error(errorData.message || errorData.error || `HTTP error! status: ${response.status}`);
   }
   return response.json();
 };
 
-// Decode user ID from JWT token payload
+// Get user ID from JWT token (decode the payload)
 const getUserIdFromToken = () => {
   const token = getAuthToken();
   if (!token) return null;
-
+  
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     return payload.userId;
@@ -42,26 +40,16 @@ const getUserIdFromToken = () => {
   }
 };
 
-// Shared helper — throws if not authenticated
-const requireUserId = () => {
-  const userId = getUserIdFromToken();
-  if (!userId) throw new Error('User not authenticated');
-  return userId;
-};
-
-// ---------------------------------------------------------------------------
-// Summary endpoints
-// ---------------------------------------------------------------------------
-
-// Get total balance (income − expenses)
+// Get total balance
 export const getTotalBalance = async () => {
   try {
-    const userId = requireUserId();
+    const userId = getUserIdFromToken();
+    if (!userId) throw new Error('User not authenticated');
 
-    const response = await fetch(
-      `${API_BASE_URL}/api/history/balance?user_id=${userId}`,
-      { method: 'GET', headers: createHeaders() }
-    );
+    const response = await fetch(`${API_BASE_URL}/api/history/balance?user_id=${userId}`, {
+      method: 'GET',
+      headers: createHeaders()
+    });
 
     return await handleResponse(response);
   } catch (error) {
@@ -73,12 +61,13 @@ export const getTotalBalance = async () => {
 // Get total income
 export const getTotalIncome = async () => {
   try {
-    const userId = requireUserId();
+    const userId = getUserIdFromToken();
+    if (!userId) throw new Error('User not authenticated');
 
-    const response = await fetch(
-      `${API_BASE_URL}/api/history/income?user_id=${userId}`,
-      { method: 'GET', headers: createHeaders() }
-    );
+    const response = await fetch(`${API_BASE_URL}/api/history/income?user_id=${userId}`, {
+      method: 'GET',
+      headers: createHeaders()
+    });
 
     return await handleResponse(response);
   } catch (error) {
@@ -90,12 +79,13 @@ export const getTotalIncome = async () => {
 // Get total expenses
 export const getTotalExpenses = async () => {
   try {
-    const userId = requireUserId();
+    const userId = getUserIdFromToken();
+    if (!userId) throw new Error('User not authenticated');
 
-    const response = await fetch(
-      `${API_BASE_URL}/api/history/expenses?user_id=${userId}`,
-      { method: 'GET', headers: createHeaders() }
-    );
+    const response = await fetch(`${API_BASE_URL}/api/history/expenses?user_id=${userId}`, {
+      method: 'GET',
+      headers: createHeaders()
+    });
 
     return await handleResponse(response);
   } catch (error) {
@@ -107,12 +97,13 @@ export const getTotalExpenses = async () => {
 // Get total savings
 export const getTotalSavings = async () => {
   try {
-    const userId = requireUserId();
+    const userId = getUserIdFromToken();
+    if (!userId) throw new Error('User not authenticated');
 
-    const response = await fetch(
-      `${API_BASE_URL}/api/history/savings?user_id=${userId}`,
-      { method: 'GET', headers: createHeaders() }
-    );
+    const response = await fetch(`${API_BASE_URL}/api/history/savings?user_id=${userId}`, {
+      method: 'GET',
+      headers: createHeaders()
+    });
 
     return await handleResponse(response);
   } catch (error) {
@@ -121,42 +112,44 @@ export const getTotalSavings = async () => {
   }
 };
 
-// Get all summary figures in a single parallel fetch
+// Get all summary data at once
 export const getSummaryData = async () => {
   try {
-    const userId = requireUserId();
+    const userId = getUserIdFromToken();
+    if (!userId) throw new Error('User not authenticated');
 
-    const [balanceRes, incomeRes, expensesRes, savingsRes] = await Promise.all([
+    // Make parallel requests for better performance
+    const [balanceResponse, incomeResponse, expensesResponse, savingsResponse] = await Promise.all([
       fetch(`${API_BASE_URL}/api/history/balance?user_id=${userId}`, {
         method: 'GET',
-        headers: createHeaders(),
+        headers: createHeaders()
       }),
       fetch(`${API_BASE_URL}/api/history/income?user_id=${userId}`, {
         method: 'GET',
-        headers: createHeaders(),
+        headers: createHeaders()
       }),
       fetch(`${API_BASE_URL}/api/history/expenses?user_id=${userId}`, {
         method: 'GET',
-        headers: createHeaders(),
+        headers: createHeaders()
       }),
       fetch(`${API_BASE_URL}/api/history/savings?user_id=${userId}`, {
         method: 'GET',
-        headers: createHeaders(),
-      }),
+        headers: createHeaders()
+      })
     ]);
 
     const [balanceData, incomeData, expensesData, savingsData] = await Promise.all([
-      handleResponse(balanceRes),
-      handleResponse(incomeRes),
-      handleResponse(expensesRes),
-      handleResponse(savingsRes),
+      handleResponse(balanceResponse),
+      handleResponse(incomeResponse),
+      handleResponse(expensesResponse),
+      handleResponse(savingsResponse)
     ]);
 
     return {
-      totalBalance: balanceData.data?.balance ?? 0,
-      totalIncome: incomeData.data?.total_income ?? 0,
-      totalExpenses: expensesData.data?.total_expenses ?? 0,
-      totalSavings: savingsData.data?.total_savings ?? 0,
+      totalBalance: balanceData.balance || 0,
+      totalIncome: incomeData.total_income || 0,
+      totalExpenses: expensesData.total_expenses || 0,
+      totalSavings: savingsData.total_savings || 0
     };
   } catch (error) {
     console.error('Error fetching summary data:', error);
@@ -164,25 +157,22 @@ export const getSummaryData = async () => {
   }
 };
 
-// ---------------------------------------------------------------------------
-// Transaction endpoints
-// ---------------------------------------------------------------------------
-
-// Get recent transactions (last N days)
+// Get recent transactions
 export const getRecentTransactions = async (days = 30, limit = 100) => {
   try {
-    const userId = requireUserId();
+    const userId = getUserIdFromToken();
+    if (!userId) throw new Error('User not authenticated');
 
     const params = new URLSearchParams({
       user_id: userId,
       days: days.toString(),
-      limit: limit.toString(),
+      limit: limit.toString()
     });
 
-    const response = await fetch(
-      `${API_BASE_URL}/api/history/transactions?${params.toString()}`,
-      { method: 'GET', headers: createHeaders() }
-    );
+    const response = await fetch(`${API_BASE_URL}/api/history/transactions?${params.toString()}`, {
+      method: 'GET',
+      headers: createHeaders()
+    });
 
     return await handleResponse(response);
   } catch (error) {
@@ -191,73 +181,87 @@ export const getRecentTransactions = async (days = 30, limit = 100) => {
   }
 };
 
-// Get all transactions across all types (income, expense, savings) with optional date range
-export const getAllTransactions = async (startDate, endDate, limit = 100) => {
-  try {
-    const userId = requireUserId();
-
-    const params = new URLSearchParams({ user_id: userId, limit: limit.toString() });
-    if (startDate) params.set('start_date', startDate);
-    if (endDate) params.set('end_date', endDate);
-
-    const response = await fetch(
-      `${API_BASE_URL}/api/history/transactions?${params.toString()}`,
-      { method: 'GET', headers: createHeaders() }
-    );
-
-    return await handleResponse(response);
-  } catch (error) {
-    console.error('Error fetching all transactions:', error);
-    throw error;
-  }
-};
-
-// Get transactions filtered by type with optional date range
-// type: 'income' | 'expense' | 'savings'
-export const getTransactionsByType = async (type, startDate, endDate, limit = 100) => {
-  try {
-    const userId = requireUserId();
-
-    const params = new URLSearchParams({ user_id: userId, type, limit: limit.toString() });
-    if (startDate) params.set('start_date', startDate);
-    if (endDate) params.set('end_date', endDate);
-
-    const response = await fetch(
-      `${API_BASE_URL}/api/history/transactions?${params.toString()}`,
-      { method: 'GET', headers: createHeaders() }
-    );
-
-    return await handleResponse(response);
-  } catch (error) {
-    console.error(`Error fetching ${type} transactions:`, error);
-    throw error;
-  }
-};
-
-// Get transactions within a custom date range (all types)
+// Get transactions with date range
 export const getTransactionsDateRange = async (startDate, endDate, limit = 100) => {
-  return getAllTransactions(startDate, endDate, limit);
+  try {
+    const userId = getUserIdFromToken();
+    if (!userId) throw new Error('User not authenticated');
+
+    const params = new URLSearchParams({
+      user_id: userId,
+      start_date: startDate,
+      end_date: endDate,
+      limit: limit.toString()
+    });
+
+    const response = await fetch(`${API_BASE_URL}/api/history/transactions?${params.toString()}`, {
+      method: 'GET',
+      headers: createHeaders()
+    });
+
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('Error fetching transactions with date range:', error);
+    throw error;
+  }
 };
 
-// Get savings transactions within a date range (used by SavingsTargetCard)
+// Get savings transactions with date range (used by SavingsTargetCard)
 export const getSavingsTransactionsDateRange = async (startDate, endDate, limit = 1000) => {
-  return getTransactionsByType('savings', startDate, endDate, limit);
+  try {
+    const userId = getUserIdFromToken();
+    if (!userId) throw new Error('User not authenticated');
+
+    const params = new URLSearchParams({
+      user_id: userId,
+      start_date: startDate,
+      end_date: endDate,
+      type: 'savings',
+      limit: limit.toString()
+    });
+
+    const response = await fetch(`${API_BASE_URL}/api/history/transactions?${params.toString()}`, {
+      method: 'GET',
+      headers: createHeaders()
+    });
+
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('Error fetching savings transactions with date range:', error);
+    throw error;
+  }
 };
 
-// Get all savings transactions without a date filter (used by SavingsSourcesCard)
+// Get all savings transactions, no date filter (used by SavingsSourcesCard)
 export const getAllSavingsTransactions = async (limit = 1000) => {
-  return getTransactionsByType('savings', null, null, limit);
+  try {
+    const userId = getUserIdFromToken();
+    if (!userId) throw new Error('User not authenticated');
+
+    const params = new URLSearchParams({
+      user_id: userId,
+      type: 'savings',
+      limit: limit.toString()
+    });
+
+    const response = await fetch(`${API_BASE_URL}/api/history/transactions?${params.toString()}`, {
+      method: 'GET',
+      headers: createHeaders()
+    });
+
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('Error fetching all savings transactions:', error);
+    throw error;
+  }
 };
 
-// ---------------------------------------------------------------------------
 // Health check
-// ---------------------------------------------------------------------------
-
 export const checkHistoryServiceHealth = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/api/history/health`, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' }
     });
 
     return await handleResponse(response);
