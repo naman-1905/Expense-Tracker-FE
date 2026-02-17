@@ -216,8 +216,7 @@ function Home() {
                 <span className="font-medium">Expense</span>
               </button>
             </li>
-            </ul>
-            {/* <li>
+            <li>
               <button
                 onClick={() => handleNavClick('savings')}
                 className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-lg text-left transition-colors ${
@@ -229,7 +228,8 @@ function Home() {
                 <PiggyBank className="w-5 h-5 flex-shrink-0" />
                 <span className="font-medium">Piggy Bank</span>
               </button>
-            </li> */}
+            </li>
+            </ul>
 
           {/* Currency Switcher */}
           <div className="mt-6 pt-6 border-t border-gray-200">
