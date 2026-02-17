@@ -1,12 +1,10 @@
 import React from 'react'
+import SavingsTargetCard from '../cards/SavingsTargetCard'
 
 function SavingsLayout() {
   return (
 <div>
-  <p>In Progress for the next production version :)</p>
-  <br/>
-  <p>Regards,</p>
-  <p>Naman :)</p>
+<SavingsTargetCard/>
 </div>
   )
 }
