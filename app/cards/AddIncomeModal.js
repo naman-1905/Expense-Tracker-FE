@@ -184,7 +184,7 @@ const AddIncomeModal = ({ isOpen, onClose, onAddIncome }) => {
 
     try {
       const transactionData = {
-        title: incomeTitle,
+        name: incomeTitle,
         amount: parseFloat(finalAmount.toFixed(2)), // Send INR amount
         type: 'income',
         emoji: selectedEmoji
