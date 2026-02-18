@@ -184,7 +184,7 @@ const AddExpenseModal = ({ isOpen, onClose, onAddExpense }) => {
 
     try {
       const transactionData = {
-        title: expenseTitle,
+        name: expenseTitle,
         amount: parseFloat(finalAmount.toFixed(2)), // Send INR amount
         type: 'expense',
         emoji: selectedEmoji
