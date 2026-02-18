@@ -94,24 +94,6 @@ export const getTotalExpenses = async () => {
   }
 };
 
-// Get total savings
-export const getTotalSavings = async () => {
-  try {
-    const userId = getUserIdFromToken();
-    if (!userId) throw new Error('User not authenticated');
-
-    const response = await fetch(`${API_BASE_URL}/api/history/savings?user_id=${userId}`, {
-      method: 'GET',
-      headers: createHeaders()
-    });
-
-    return await handleResponse(response);
-  } catch (error) {
-    console.error('Error fetching savings:', error);
-    throw error;
-  }
-};
-
 // Get all summary data at once
 export const getSummaryData = async () => {
   try {
@@ -119,7 +101,7 @@ export const getSummaryData = async () => {
     if (!userId) throw new Error('User not authenticated');
 
     // Make parallel requests for better performance
-    const [balanceResponse, incomeResponse, expensesResponse, savingsResponse] = await Promise.all([
+    const [balanceResponse, incomeResponse, expensesResponse] = await Promise.all([
       fetch(`${API_BASE_URL}/api/history/balance?user_id=${userId}`, {
         method: 'GET',
         headers: createHeaders()
@@ -131,25 +113,21 @@ export const getSummaryData = async () => {
       fetch(`${API_BASE_URL}/api/history/expenses?user_id=${userId}`, {
         method: 'GET',
         headers: createHeaders()
-      }),
-      fetch(`${API_BASE_URL}/api/history/savings?user_id=${userId}`, {
-        method: 'GET',
-        headers: createHeaders()
       })
     ]);
 
-    const [balanceData, incomeData, expensesData, savingsData] = await Promise.all([
+    // Handle responses
+    const [balanceData, incomeData, expensesData] = await Promise.all([
       handleResponse(balanceResponse),
       handleResponse(incomeResponse),
-      handleResponse(expensesResponse),
-      handleResponse(savingsResponse)
+      handleResponse(expensesResponse)
     ]);
 
+    // Return formatted data matching your Summary component structure
     return {
       totalBalance: balanceData.balance || 0,
       totalIncome: incomeData.total_income || 0,
-      totalExpenses: expensesData.total_expenses || 0,
-      totalSavings: savingsData.total_savings || 0
+      totalExpenses: expensesData.total_expenses || 0
     };
   } catch (error) {
     console.error('Error fetching summary data:', error);
@@ -202,56 +180,6 @@ export const getTransactionsDateRange = async (startDate, endDate, limit = 100) 
     return await handleResponse(response);
   } catch (error) {
     console.error('Error fetching transactions with date range:', error);
-    throw error;
-  }
-};
-
-// Get savings transactions with date range (used by SavingsTargetCard)
-export const getSavingsTransactionsDateRange = async (startDate, endDate, limit = 1000) => {
-  try {
-    const userId = getUserIdFromToken();
-    if (!userId) throw new Error('User not authenticated');
-
-    const params = new URLSearchParams({
-      user_id: userId,
-      start_date: startDate,
-      end_date: endDate,
-      type: 'savings',
-      limit: limit.toString()
-    });
-
-    const response = await fetch(`${API_BASE_URL}/api/history/transactions?${params.toString()}`, {
-      method: 'GET',
-      headers: createHeaders()
-    });
-
-    return await handleResponse(response);
-  } catch (error) {
-    console.error('Error fetching savings transactions with date range:', error);
-    throw error;
-  }
-};
-
-// Get all savings transactions, no date filter (used by SavingsSourcesCard)
-export const getAllSavingsTransactions = async (limit = 1000) => {
-  try {
-    const userId = getUserIdFromToken();
-    if (!userId) throw new Error('User not authenticated');
-
-    const params = new URLSearchParams({
-      user_id: userId,
-      type: 'savings',
-      limit: limit.toString()
-    });
-
-    const response = await fetch(`${API_BASE_URL}/api/history/transactions?${params.toString()}`, {
-      method: 'GET',
-      headers: createHeaders()
-    });
-
-    return await handleResponse(response);
-  } catch (error) {
-    console.error('Error fetching all savings transactions:', error);
     throw error;
   }
 };
