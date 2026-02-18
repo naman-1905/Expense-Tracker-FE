@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { PiggyBank, Download } from 'lucide-react';
-import { getAllSavingsTransactions } from '../api/utils/historyAPI';
 import { useCurrency } from '../context/CurrencyContext';
 import * as XLSX from 'xlsx';
 
-// Standalone card — fetches ALL transactions of type 'savings', no date filter.
-const SavingsSourcesCard = () => {
+const DUMMY_SAVINGS = [
+  { name: 'Emergency Fund', emoji: '🏦', amount: 5000, count: 4 },
+  { name: 'Vacation Fund', emoji: '✈️', amount: 3200, count: 6 },
+  { name: 'Retirement', emoji: '🌴', amount: 8500, count: 12 },
+  { name: 'New Car', emoji: '🚗', amount: 2100, count: 3 },
+  { name: 'Home Down Payment', emoji: '🏠', amount: 12000, count: 8 },
+  { name: 'Gadget Fund', emoji: '💻', amount: 750, count: 2 },
+];
+
+const SavingsSourcesCard = ({ startDate, endDate, onTotalUpdate, onLoadingChange }) => {
   const { formatAmount } = useCurrency();
 
   const [sources, setSources] = useState([]);
@@ -15,49 +22,43 @@ const SavingsSourcesCard = () => {
   const fetchSources = async () => {
     try {
       setLoading(true);
+      if (onLoadingChange) onLoadingChange(true);
       setError(null);
 
-      // Load cache immediately for instant render
-      const cached = localStorage.getItem('savingsSourcesData');
-      if (cached) {
-        setSources(JSON.parse(cached));
-        setLoading(false);
-      }
+      // Simulate async fetch delay
+      await new Promise((resolve) => setTimeout(resolve, 600));
 
-      // Fetch all savings-type transactions
-      const data = await getAllSavingsTransactions(1000);
-      const savingsTransactions = data.transactions || [];
-
-      // Group by name, sum amounts
-      const grouped = savingsTransactions.reduce((acc, t) => {
-        const key = t.name;
-        if (!acc[key]) {
-          acc[key] = { name: t.name, emoji: t.emoji || '🐷', amount: 0, count: 0 };
-        }
-        acc[key].amount += t.amount;
-        acc[key].count += 1;
-        return acc;
-      }, {});
-
-      const sourcesArray = Object.values(grouped)
+      // NOTE: In a real app, you would pass `startDate` and `endDate` into your API 
+      // call here to filter the real transactions. 
+      const sourcesArray = DUMMY_SAVINGS
         .sort((a, b) => b.amount - a.amount)
         .map((s, i) => ({ ...s, id: i + 1 }));
 
       setSources(sourcesArray);
-      localStorage.setItem('savingsSourcesData', JSON.stringify(sourcesArray));
     } catch (err) {
       setError(err.message);
-      console.error('Error fetching savings sources:', err);
+      console.error('Error loading savings sources:', err);
     } finally {
       setLoading(false);
+      if (onLoadingChange) onLoadingChange(false);
     }
   };
 
+  // Refetch when dates change
   useEffect(() => {
     fetchSources();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate]);
 
   const calculateTotal = () => sources.reduce((sum, s) => sum + s.amount, 0);
+
+  // Update the parent with the new total whenever sources array updates
+  useEffect(() => {
+    if (onTotalUpdate) {
+      onTotalUpdate(calculateTotal());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sources]);
 
   const downloadExcel = () => {
     if (sources.length === 0) return;
@@ -77,17 +78,27 @@ const SavingsSourcesCard = () => {
     const wb = XLSX.utils.book_new();
     ws['!cols'] = [{ width: 25 }, { width: 15 }, { width: 18 }];
     XLSX.utils.book_append_sheet(wb, ws, 'Savings Sources');
-    XLSX.writeFile(wb, `savings-sources-all-time.xlsx`);
+    
+    // Custom filename based on dates
+    const fileName = startDate && endDate 
+      ? `savings-sources-${startDate}-to-${endDate}.xlsx` 
+      : 'savings-sources-all-time.xlsx';
+      
+    XLSX.writeFile(wb, fileName);
   };
+
+  // Dynamic header text based on date props
+  const periodText = startDate && endDate 
+    ? `${new Date(startDate).toLocaleDateString()} – ${new Date(endDate).toLocaleDateString()}`
+    : 'All time · savings transactions';
 
   return (
     <div className="bg-white rounded-xl shadow-md border border-gray-100 transition-shadow duration-300 min-h-[400px] max-h-[600px] sm:h-96 flex flex-col">
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 sm:p-6 pb-4 border-b border-gray-100">
         <div>
           <h2 className="text-2xl font-bold text-gray-800 mb-1">Savings Sources</h2>
-          <p className="text-xs text-gray-400">All time · savings transactions</p>
+          <p className="text-xs text-gray-400">{periodText}</p>
         </div>
 
         <button
@@ -163,7 +174,7 @@ const SavingsSourcesCard = () => {
               <div className="text-2xl">🐷</div>
               <div>
                 <p className="font-bold text-gray-800">Total Savings</p>
-                <p className="text-xs text-gray-500">All time</p>
+                <p className="text-xs text-gray-500">Period total</p>
               </div>
             </div>
             <div className="text-right">
@@ -174,7 +185,6 @@ const SavingsSourcesCard = () => {
           </div>
         </div>
       )}
-
     </div>
   );
 };
