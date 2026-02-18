@@ -1,85 +1,50 @@
-import React, { useState, useEffect } from 'react'
-import { Wallet, Pencil, Check, X, Loader } from 'lucide-react'
-import { getSavingsTransactionsDateRange } from '../api/utils/historyAPI'
-import { useCurrency } from '../context/CurrencyContext'
+import React, { useState } from 'react';
+import { Wallet, Pencil, Check, X, Loader } from 'lucide-react';
+import { useCurrency } from '../context/CurrencyContext';
 
-function SavingsTargetCard() {
-  const { formatAmount } = useCurrency()
+function SavingsTargetCard({ startDate, endDate, periodTotal, isFetching, onDateChange }) {
+  const { formatAmount } = useCurrency();
 
-  // Locked committed settings
-  const [savedTarget, setSavedTarget] = useState(10000)
-  const [savedStartDate, setSavedStartDate] = useState('')
-  const [savedEndDate, setSavedEndDate] = useState('')
-
-  // Draft — null when locked, populated when editing
-  const [draft, setDraft] = useState(null)
-  const isEditing = draft !== null
-
-  // Amount saved in the period — fetched independently
-  const [periodTotal, setPeriodTotal] = useState(0)
-  const [fetching, setFetching] = useState(false)
+  // Internal state strictly for the target amount and drafting
+  const [savedTarget, setSavedTarget] = useState(10000);
+  const [draft, setDraft] = useState(null);
+  
+  const isEditing = draft !== null;
 
   const progress = savedTarget > 0
     ? Math.min(Math.round((periodTotal / savedTarget) * 100), 100)
-    : 0
-
-  // Fetch savings-type transactions for the committed date range
-  const fetchPeriodTotal = async (start, end) => {
-    if (!start || !end) {
-      setPeriodTotal(0)
-      return
-    }
-    try {
-      setFetching(true)
-      const cacheKey = `piggyPeriodTotal_${start}_${end}`
-      const cached = localStorage.getItem(cacheKey)
-      if (cached) setPeriodTotal(JSON.parse(cached))
-
-      const data = await getSavingsTransactionsDateRange(start, end, 1000)
-      const total = (data.transactions || [])
-        .reduce((sum, t) => sum + t.amount, 0)
-
-      setPeriodTotal(total)
-      localStorage.setItem(cacheKey, JSON.stringify(total))
-    } catch (err) {
-      console.error('Error fetching period total:', err)
-    } finally {
-      setFetching(false)
-    }
-  }
-
-  // Re-fetch whenever the committed period changes
-  useEffect(() => {
-    fetchPeriodTotal(savedStartDate, savedEndDate)
-  }, [savedStartDate, savedEndDate])
+    : 0;
 
   const handleEdit = () => {
     setDraft({
       target: String(savedTarget),
-      startDate: savedStartDate,
-      endDate: savedEndDate,
-    })
-  }
+      startDate: startDate || '',
+      endDate: endDate || '',
+    });
+  };
 
   const handleSave = () => {
-    const parsed = parseFloat(draft.target)
-    if (!isNaN(parsed) && parsed > 0) setSavedTarget(parsed)
-    setSavedStartDate(draft.startDate)
-    setSavedEndDate(draft.endDate)
-    setDraft(null)
-  }
+    const parsed = parseFloat(draft.target);
+    if (!isNaN(parsed) && parsed > 0) setSavedTarget(parsed);
+    
+    // Pass the new dates up to the parent so the Sources card can react
+    if (onDateChange) {
+      onDateChange(draft.startDate, draft.endDate);
+    }
+    setDraft(null);
+  };
 
-  const handleCancel = () => setDraft(null)
+  const handleCancel = () => setDraft(null);
 
   const updateDraft = (field, value) =>
-    setDraft(prev => ({ ...prev, [field]: value }))
+    setDraft(prev => ({ ...prev, [field]: value }));
 
   const getPeriodLabel = () => {
-    if (!savedStartDate || !savedEndDate) return null
+    if (!startDate || !endDate) return null;
     const fmt = (d) =>
-      new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    return `${fmt(savedStartDate)} – ${fmt(savedEndDate)}`
-  }
+      new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return `${fmt(startDate)} – ${fmt(endDate)}`;
+  };
 
   return (
     <div className={`bg-white rounded-2xl shadow-sm p-8 border transition-all duration-300 w-full ${
@@ -87,7 +52,6 @@ function SavingsTargetCard() {
         ? 'border-purple-300 shadow-md ring-2 ring-purple-100'
         : 'border-gray-100 hover:shadow-md'
     }`}>
-
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div className="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center">
@@ -109,17 +73,15 @@ function SavingsTargetCard() {
 
       {/* Amounts row */}
       <div className="flex items-end justify-between mb-2">
-        {/* Saved so far for the period */}
         <div>
           <div className="flex items-center gap-1.5">
             <span className="text-2xl font-bold text-gray-800">
               {formatAmount(periodTotal)}
             </span>
-            {fetching && <Loader className="w-3.5 h-3.5 text-purple-400 animate-spin" />}
+            {isFetching && <Loader className="w-3.5 h-3.5 text-purple-400 animate-spin" />}
           </div>
         </div>
 
-        {/* Target — editable in draft mode */}
         <div className="flex items-center gap-1">
           <span className="text-xs text-gray-400 font-medium">of</span>
           {isEditing ? (
@@ -154,13 +116,13 @@ function SavingsTargetCard() {
         <p className="text-xs text-purple-500 font-semibold">{progress}% reached</p>
       </div>
 
-      {/* Date range — locked unless editing */}
+      {/* Date range */}
       <div className="grid grid-cols-2 gap-3 mb-5">
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">Start Date</label>
           <input
             type="date"
-            value={isEditing ? draft.startDate : savedStartDate}
+            value={isEditing ? draft.startDate : startDate}
             onChange={(e) => updateDraft('startDate', e.target.value)}
             disabled={!isEditing}
             className={`w-full px-3 py-2 border rounded-lg text-sm text-gray-700 focus:outline-none transition-colors ${
@@ -174,7 +136,7 @@ function SavingsTargetCard() {
           <label className="block text-xs font-medium text-gray-500 mb-1">End Date</label>
           <input
             type="date"
-            value={isEditing ? draft.endDate : savedEndDate}
+            value={isEditing ? draft.endDate : endDate}
             min={isEditing ? draft.startDate : undefined}
             onChange={(e) => updateDraft('endDate', e.target.value)}
             disabled={!isEditing}
@@ -206,9 +168,8 @@ function SavingsTargetCard() {
           </button>
         </div>
       )}
-
     </div>
-  )
+  );
 }
 
-export default SavingsTargetCard
+export default SavingsTargetCard;
