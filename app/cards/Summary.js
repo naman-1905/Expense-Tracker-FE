@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Wallet, TrendingUp, TrendingDown, RefreshCw, Loader, AlertCircle } from 'lucide-react';
 import { getSummaryData } from '../api/utils/historyAPI';
 import { useCurrency } from '../context/CurrencyContext';
+import { subscribeToLocalChanges } from '../api/utils/localStore';
 
 function Summary() {
   const [data, setData] = useState({
@@ -14,7 +15,7 @@ function Summary() {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const { formatAmount } = useCurrency();
 
-  const fetchSummaryData = async () => {
+  const fetchSummaryData = useCallback(async () => {
     try {
       if (isInitialLoad) {
         setLoading(true);
@@ -39,7 +40,7 @@ function Summary() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isInitialLoad]);
 
   const handleRefresh = () => {
     fetchSummaryData();
@@ -47,7 +48,8 @@ function Summary() {
 
   useEffect(() => {
     fetchSummaryData();
-  }, []);
+    return subscribeToLocalChanges(fetchSummaryData);
+  }, [fetchSummaryData]);
 
   const LoadingCard = () => (
     <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
@@ -103,7 +105,7 @@ function Summary() {
         </button>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="summary-cards grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {loading ? (
           <>
             <LoadingCard />
@@ -113,7 +115,7 @@ function Summary() {
         ) : (
           <>
             {/* Balance Card */}
-            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow duration-300">
+            <div className="balance-highlight bg-white rounded-2xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow duration-300">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-500 mb-1">Total Balance</p>
@@ -126,7 +128,7 @@ function Summary() {
                     <p className="text-xs text-red-500 mt-1">Deficit</p>
                   )}
                 </div>
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                <div className={`balance-icon w-12 h-12 rounded-full flex items-center justify-center ${
                   data.totalBalance >= 0 ? 'bg-green-100' : 'bg-red-100'
                 }`}>
                   <Wallet className={`w-6 h-6 ${
@@ -137,7 +139,7 @@ function Summary() {
             </div>
 
             {/* Income Card */}
-            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow duration-300">
+            <div className="income-highlight bg-white rounded-2xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow duration-300">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-500 mb-1">Total Income</p>
@@ -153,7 +155,7 @@ function Summary() {
             </div>
 
             {/* Expenses Card */}
-            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow duration-300">
+            <div className="expense-highlight bg-white rounded-2xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow duration-300">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-500 mb-1">Total Expenses</p>

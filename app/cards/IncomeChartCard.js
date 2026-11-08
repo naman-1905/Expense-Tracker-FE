@@ -3,6 +3,7 @@ import * as Chart from 'chart.js';
 import { getRecentTransactions } from '../api/utils/historyAPI';
 import AddIncomeModal from './AddIncomeModal';
 import { useCurrency } from '../context/CurrencyContext';
+import { subscribeToLocalChanges } from '../api/utils/localStore';
 
 const IncomeChartCard = () => {
   const chartRef = useRef(null);
@@ -62,6 +63,7 @@ const IncomeChartCard = () => {
   // Initial load
   useEffect(() => {
     fetchIncomeData();
+    return subscribeToLocalChanges(fetchIncomeData);
   }, []);
 
   const formatDate = (dateString) => {

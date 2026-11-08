@@ -24,21 +24,6 @@ pipeline {
 
     stages {
 
-        stage('Prepare Environment Files') {
-            steps {
-                script {
-                    echo "Preparing environment files..."
-                    sh """
-                        rm -f .env.* || true
-                    """
-                    
-                    if (!fileExists('.env')) {
-                        error(".env file not found in the project directory!")
-                    }
-                }
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
                 script {

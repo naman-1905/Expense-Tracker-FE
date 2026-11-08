@@ -3,6 +3,7 @@ import * as Chart from 'chart.js';
 import { getRecentTransactions } from '../api/utils/historyAPI';
 import AddExpenseModal from './AddExpenseModal';
 import { useCurrency } from '../context/CurrencyContext';
+import { subscribeToLocalChanges } from '../api/utils/localStore';
 
 const ExpenseChartCard = () => {
   const chartRef = useRef(null);
@@ -62,6 +63,7 @@ const ExpenseChartCard = () => {
   // Initial load
   useEffect(() => {
     fetchExpenseData();
+    return subscribeToLocalChanges(fetchExpenseData);
   }, []);
 
   const formatDate = (dateString) => {

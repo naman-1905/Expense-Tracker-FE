@@ -3,6 +3,7 @@ import Chart from 'chart.js/auto';
 import { Loader, RefreshCw, AlertCircle } from 'lucide-react';
 import { getSummaryData } from '../api/utils/historyAPI';
 import { useCurrency } from '../context/CurrencyContext';
+import { subscribeToLocalChanges } from '../api/utils/localStore';
 
 function FinanceOverview() {
   const chartRef = useRef(null);
@@ -12,6 +13,7 @@ function FinanceOverview() {
   // Initialize from localStorage if available
   const getCachedData = () => {
     try {
+      if (typeof window === 'undefined') return null;
       const cached = localStorage.getItem('financialOverviewData');
       if (cached) {
         return JSON.parse(cached);
@@ -59,6 +61,7 @@ function FinanceOverview() {
 
   useEffect(() => {
     fetchFinancialData();
+    return subscribeToLocalChanges(fetchFinancialData);
   }, []);
 
   useEffect(() => {
@@ -217,7 +220,7 @@ function FinanceOverview() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl shadow-md p-8 border border-gray-100/50 backdrop-blur-sm min-h-[600px] flex items-center justify-center">
+      <div className="finance-overview bg-white rounded-xl shadow-md p-8 border border-gray-100/50 backdrop-blur-sm min-h-[600px] flex items-center justify-center">
         <div className="text-center">
           <Loader className="w-8 h-8 animate-spin text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500">Loading financial overview...</p>
@@ -228,7 +231,7 @@ function FinanceOverview() {
 
   if (error) {
     return (
-      <div className="bg-white rounded-xl shadow-md p-8 border border-gray-100/50 backdrop-blur-sm min-h-[600px] flex items-center justify-center">
+      <div className="finance-overview bg-white rounded-xl shadow-md p-8 border border-gray-100/50 backdrop-blur-sm min-h-[600px] flex items-center justify-center">
         <div className="text-center">
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-800 mb-2">Unable to Load Data</h3>
@@ -254,7 +257,7 @@ function FinanceOverview() {
     : 0;
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-8 border border-gray-100/50 backdrop-blur-sm">
+    <div className="finance-overview bg-white rounded-xl shadow-md p-8 border border-gray-100/50 backdrop-blur-sm">
       {/* Header */}
       <div className="flex justify-between items-start mb-8">
         <div>

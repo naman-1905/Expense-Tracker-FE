@@ -71,21 +71,25 @@ export const CurrencyProvider = ({ children }) => {
     return rate ? amountInINR * rate : amountInINR;
   };
 
+  const effectiveCurrency = selectedCurrency === 'INR' || exchangeRates[selectedCurrency.toLowerCase()]
+    ? selectedCurrency
+    : 'INR';
+
   const formatAmount = (amountInINR, options = {}) => {
     const convertedAmount = convertFromINR(amountInINR);
-    const currencyInfo = CURRENCIES.find(c => c.code === selectedCurrency);
+    const currencyInfo = CURRENCIES.find(c => c.code === effectiveCurrency);
     
     const formatted = new Intl.NumberFormat('en-US', {
       minimumFractionDigits: options.minimumFractionDigits ?? 0,
       maximumFractionDigits: options.maximumFractionDigits ?? 2,
     }).format(Math.abs(convertedAmount));
 
-    return `${currencyInfo?.symbol || selectedCurrency} ${formatted}`;
+    return `${currencyInfo?.symbol || effectiveCurrency} ${formatted}`;
   };
 
   const getCurrencySymbol = () => {
-    const currencyInfo = CURRENCIES.find(c => c.code === selectedCurrency);
-    return currencyInfo?.symbol || selectedCurrency;
+    const currencyInfo = CURRENCIES.find(c => c.code === effectiveCurrency);
+    return currencyInfo?.symbol || effectiveCurrency;
   };
 
   const value = {

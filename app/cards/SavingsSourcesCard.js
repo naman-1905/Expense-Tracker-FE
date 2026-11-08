@@ -1,16 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { PiggyBank, Download } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { PiggyBank, Download, Plus, X } from 'lucide-react';
 import { useCurrency } from '../context/CurrencyContext';
 import * as XLSX from 'xlsx';
-
-const DUMMY_SAVINGS = [
-  { name: 'Emergency Fund', emoji: '🏦', amount: 5000, count: 4 },
-  { name: 'Vacation Fund', emoji: '✈️', amount: 3200, count: 6 },
-  { name: 'Retirement', emoji: '🌴', amount: 8500, count: 12 },
-  { name: 'New Car', emoji: '🚗', amount: 2100, count: 3 },
-  { name: 'Home Down Payment', emoji: '🏠', amount: 12000, count: 8 },
-  { name: 'Gadget Fund', emoji: '💻', amount: 750, count: 2 },
-];
+import { getTransactionsLocal, subscribeToLocalChanges } from '../api/utils/localStore';
+import { createTransaction } from '../api/utils/transactionAPI';
 
 const SavingsSourcesCard = ({ startDate, endDate, onTotalUpdate, onLoadingChange }) => {
   const { formatAmount } = useCurrency();
@@ -18,21 +11,42 @@ const SavingsSourcesCard = ({ startDate, endDate, onTotalUpdate, onLoadingChange
   const [sources, setSources] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newAmount, setNewAmount] = useState('');
 
-  const fetchSources = async () => {
+  const addSavings = async (event) => {
+    event.preventDefault();
+    try {
+      await createTransaction({ name: newName, amount: Number(newAmount), type: 'savings', emoji: '🐷' });
+      setNewName('');
+      setNewAmount('');
+      setShowAdd(false);
+    } catch (addError) {
+      setError(addError.message);
+    }
+  };
+
+  const fetchSources = useCallback(async () => {
     try {
       setLoading(true);
       if (onLoadingChange) onLoadingChange(true);
       setError(null);
 
-      // Simulate async fetch delay
-      await new Promise((resolve) => setTimeout(resolve, 600));
-
-      // NOTE: In a real app, you would pass `startDate` and `endDate` into your API 
-      // call here to filter the real transactions. 
-      const sourcesArray = DUMMY_SAVINGS
-        .sort((a, b) => b.amount - a.amount)
-        .map((s, i) => ({ ...s, id: i + 1 }));
+      const sources = getTransactionsLocal().filter((transaction) => {
+        if (transaction.type !== 'savings') return false;
+        const date = new Date(transaction.date).getTime();
+        return (!startDate || date >= new Date(startDate).getTime())
+          && (!endDate || date <= new Date(`${endDate}T23:59:59.999`).getTime());
+      });
+      const grouped = sources.reduce((result, transaction) => {
+        const key = transaction.name;
+        result[key] ||= { name: key, emoji: transaction.emoji || '🐷', amount: 0, count: 0 };
+        result[key].amount += Number(transaction.amount);
+        result[key].count += 1;
+        return result;
+      }, {});
+      const sourcesArray = Object.values(grouped).sort((a, b) => b.amount - a.amount).map((source, index) => ({ ...source, id: index + 1 }));
 
       setSources(sourcesArray);
     } catch (err) {
@@ -42,13 +56,13 @@ const SavingsSourcesCard = ({ startDate, endDate, onTotalUpdate, onLoadingChange
       setLoading(false);
       if (onLoadingChange) onLoadingChange(false);
     }
-  };
+  }, [startDate, endDate, onLoadingChange]);
 
   // Refetch when dates change
   useEffect(() => {
     fetchSources();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate]);
+    return subscribeToLocalChanges(fetchSources);
+  }, [startDate, endDate, fetchSources]);
 
   const calculateTotal = () => sources.reduce((sum, s) => sum + s.amount, 0);
 
@@ -101,15 +115,21 @@ const SavingsSourcesCard = ({ startDate, endDate, onTotalUpdate, onLoadingChange
           <p className="text-xs text-gray-400">{periodText}</p>
         </div>
 
-        <button
-          onClick={downloadExcel}
-          disabled={sources.length === 0}
-          className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 text-sm font-medium disabled:bg-gray-300 disabled:cursor-not-allowed w-full sm:w-auto justify-center"
-        >
-          <Download size={16} />
-          <span>Download</span>
-        </button>
+        <div className="flex w-full sm:w-auto gap-2">
+          <button onClick={() => setShowAdd((value) => !value)} className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-700">
+            {showAdd ? <X size={16} /> : <Plus size={16} />}<span>{showAdd ? 'Close' : 'Add savings'}</span>
+          </button>
+          <button onClick={downloadExcel} disabled={sources.length === 0} className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">
+            <Download size={16} /><span>Export</span>
+          </button>
+        </div>
       </div>
+
+      {showAdd && <form onSubmit={addSavings} className="grid grid-cols-1 gap-2 border-b border-gray-100 bg-purple-50/60 p-4 sm:grid-cols-[1fr_150px_auto]">
+        <input aria-label="Savings goal" value={newName} onChange={(event) => setNewName(event.target.value)} placeholder="Savings goal · e.g. Emergency fund" required maxLength={255} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm" />
+        <input aria-label="Amount in rupees" type="number" min="0.01" step="0.01" value={newAmount} onChange={(event) => setNewAmount(event.target.value)} placeholder="Amount in ₹" required className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm" />
+        <button type="submit" className="rounded-lg bg-[#7957f3] px-4 py-2 text-sm font-semibold text-white">Save locally</button>
+      </form>}
 
       {/* Content */}
       <div className="flex-1 overflow-hidden">
@@ -132,7 +152,7 @@ const SavingsSourcesCard = ({ startDate, endDate, onTotalUpdate, onLoadingChange
             <div className="text-gray-500 text-center">
               <PiggyBank className="w-10 h-10 mx-auto mb-2 text-gray-300" />
               <p className="font-bold">No savings found</p>
-              <p className="text-xs mt-1">Transactions with type "savings" will appear here</p>
+              <p className="text-xs mt-1">Add savings transactions to see your progress here</p>
             </div>
           </div>
         ) : (

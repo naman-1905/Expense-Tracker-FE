@@ -14,8 +14,15 @@ const manrope = Manrope({
 });
 
 export const metadata = {
-  title: "Naman's Finance Tracker",
-  description: "A not so simple expense tracker from Naman Chaturvedi",
+  title: "Pocket Finance — Personal Money Tracker",
+  description: "A private, local-first finance tracker that works offline.",
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#f3f4ef',
 };
 
 export default function RootLayout({ children }) {

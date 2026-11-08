@@ -1,140 +1,41 @@
-# Expense Tracker Frontend (Next.js)
+# Pocket Finance
 
-This is the **Next.js frontend** for the Expense Tracker platform.
+A local-first expense and income tracker built with Next.js. It needs no login, API server, database, or environment file: records are stored in the browser or the Android app’s local WebView storage. The same UI runs on desktop, mobile web, and Android through Ionic Capacitor.
 
-It connects to the polyglot backend consisting of:
+## Run the web app
 
-* Express Auth Service
-* FastAPI CRUD Service
-* Flask History Service
-
----
-
-## 📁 Project Structure
-
-Key directories:
-
-```
-app/
- ├── (auth)/
- ├── api/
- │    ├── auth/
- │    ├── lib/
- │    └── utils/
- ├── cards/
- ├── context/
- ├── home/
- ├── hooks/
- ├── screens/
-
-public/
-```
-
----
-
-## ⚙️ Environment Setup
-
-The application requires environment variables to connect with backend services.
-
-Create a `.env` file in the root:
-
-```
-Expense-Tracker-FE/.env
-```
-
----
-
-## 🔑 Required Environment Variables
-
-Add the following:
-
-```
-NEXT_PUBLIC_AUTH_API=
-NEXT_PUBLIC_CRUD_API=
-NEXT_PUBLIC_HISTORY_API=
-NEXT_PUBLIC_CURRENCY_API=
-```
-
----
-
-## 🧪 Example (Production)
-
-```
-NEXT_PUBLIC_AUTH_API=https://authexpenses.halfskirmish.com
-NEXT_PUBLIC_CRUD_API=https://crudexpenses.halfskirmish.com
-NEXT_PUBLIC_HISTORY_API=https://historyexpenses.halfskirmish.com
-NEXT_PUBLIC_CURRENCY_API=https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json
-```
-
----
-
-## 🧑‍💻 Local Development Example
-
-```
-NEXT_PUBLIC_AUTH_API=http://localhost:8001
-NEXT_PUBLIC_CRUD_API=http://localhost:8000
-NEXT_PUBLIC_HISTORY_API=http://localhost:8002
-NEXT_PUBLIC_CURRENCY_API=https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json
-```
-
----
-
-## 🚀 Running Locally
-
-Install dependencies:
-
-```
-npm install
-```
-
-Run dev server:
-
-```
+```sh
+npm ci
 npm run dev
 ```
 
-App runs at:
+Open `http://localhost:3000`. Transaction amounts are stored in INR. Currency display conversion is optional and requires an internet connection; when rates are unavailable, amounts display in INR. The app’s records and core screens work offline.
 
+## Back up or move your data
+
+Use **Export backup** in the left navigation to download a JSON file. Use **Restore backup** on another browser or device to import it. Browser and Android storage are separate; backups are the way to move records between them. Keep backup files somewhere safe because clearing app storage removes the local copy.
+
+## Build the Android app
+
+Requirements: Node.js 22 or newer, Android Studio, and an Android SDK installation. Capacitor Android uses the SDK installed through Android Studio.
+
+```sh
+npm ci
+npm run cap:add:android     # already scaffolded in this repository
+npm run cap:sync:android    # static Next.js build, then copy it into Android
+npm run android             # sync and open the native project in Android Studio
 ```
-http://localhost:3000
-```
 
----
+To create an APK, open the `android/` project in Android Studio and use **Build > Build Bundle(s) / APK(s) > Build APK(s)**. The web bundle is generated in `out/`; Capacitor uses that directory as its app content.
 
-## 🔗 Backend Dependency
+## Optional FastAPI service
 
-Make sure all backend services are running:
+The separate `Expense-Tracker-BE/fastapi` service supports server accounts and shared database records for future integrations. The default frontend does not call it and does not require it. Data stored locally is not automatically synced to the API.
 
-| Service       | Port |
-| ------------- | ---- |
-| Express Auth  | 8001 |
-| FastAPI CRUD  | 8000 |
-| Flask History | 8002 |
+## Stack
 
----
-
-## 🐳 Docker Support
-
-A Dockerfile is included for containerized deployment.
-
----
-
-## 🧠 Features
-
-* Auth Flow (Login / Signup / Refresh / Profile)
-* Expense & Income Tracking
-* Charts & Financial Overview
-* Transaction History
-* Currency Conversion Support
-
----
-
-## 📌 Notes
-
-* `NEXT_PUBLIC_*` variables are exposed to the browser.
-* Ensure backend URLs are correct.
-* `.env` should not be committed to version control.
-
----
-
-You're ready to run the Expense Tracker Frontend 
+- Next.js static export and React
+- Ionic Capacitor 8 with the Android platform
+- Browser localStorage for offline records and profile settings
+- Chart.js for summaries and trends
+- XLSX export for income, expense, and savings reports

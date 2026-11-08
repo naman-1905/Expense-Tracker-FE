@@ -176,6 +176,11 @@ const AddIncomeModal = ({ isOpen, onClose, onAddIncome }) => {
       return;
     }
 
+    if (selectedCurrency !== 'inr' && !exchangeRates[selectedCurrency]) {
+      setError('That currency rate is unavailable offline. Choose INR or connect to the internet.');
+      return;
+    }
+
     // FIX: Allow submission even if currency conversion isn't available
     const finalAmount = amountInINR > 0 ? amountInINR : parseFloat(amount);
 
@@ -187,7 +192,8 @@ const AddIncomeModal = ({ isOpen, onClose, onAddIncome }) => {
         name: incomeTitle,
         amount: parseFloat(finalAmount.toFixed(2)), // Send INR amount
         type: 'income',
-        emoji: selectedEmoji
+        emoji: selectedEmoji,
+        date: new Date(`${date}T${time}`).toISOString()
       };
 
       console.log('Sending transaction data:', transactionData); // Debug log

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Calendar, Filter, Trash2 } from 'lucide-react';
 import { getRecentTransactions, getTransactionsDateRange } from '../api/utils/historyAPI';
 import { deleteTransaction } from '../api/utils/transactionAPI';
 import { useCurrency } from '../context/CurrencyContext';
+import { subscribeToLocalChanges } from '../api/utils/localStore';
 
 const TransactionCard = () => {
   const [transactions, setTransactions] = useState([]);
@@ -36,7 +37,7 @@ const TransactionCard = () => {
   };
 
   // Fetch transactions based on period or date range
-  const fetchTransactions = async () => {
+  const fetchTransactions = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -54,7 +55,7 @@ const TransactionCard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedPeriod, customDateMode, startDate, endDate]);
 
   // Handle delete transaction
   const handleDeleteTransaction = async (transactionId) => {
@@ -78,7 +79,8 @@ const TransactionCard = () => {
   // Initial load and when period changes
   useEffect(() => {
     fetchTransactions();
-  }, [selectedPeriod]);
+    return subscribeToLocalChanges(fetchTransactions);
+  }, [fetchTransactions]);
 
   // Handle period change
   const handlePeriodChange = (period) => {
@@ -91,7 +93,6 @@ const TransactionCard = () => {
   const handleCustomDateRange = () => {
     if (startDate && endDate) {
       setCustomDateMode(true);
-      fetchTransactions();
       setShowDatePicker(false);
     }
   };
@@ -107,7 +108,7 @@ const TransactionCard = () => {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-md border border-gray-100 transition-shadow duration-300 lg:h-screen flex flex-col">
+    <div className="transaction-card bg-white rounded-xl shadow-md border border-gray-100 transition-shadow duration-300 lg:h-screen flex flex-col">
       {/* Header */}
       <div className="flex justify-between items-center p-6 pb-4 border-b border-gray-100">
         <h2 className="text-xl font-bold text-gray-800">Recent Transactions</h2>

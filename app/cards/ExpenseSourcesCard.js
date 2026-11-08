@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Download, Calendar } from 'lucide-react';
 import { getTransactionsDateRange } from '../api/utils/historyAPI';
 import * as XLSX from 'xlsx';
+import { subscribeToLocalChanges } from '../api/utils/localStore';
 
 const ExpensesCard = () => {
   const [expenses, setExpenses] = useState([]);
@@ -92,12 +93,6 @@ const popularCurrencies = [
     return { startDate, endDate: endDateStr };
   };
 
-  // Get cache key for current selection
-  const getCacheKey = () => {
-    return `expensesData_${selectedYear}_${selectedMonth}`;
-  };
-
-
   const convertCurrency = (amountInINR) => {
   if (selectedCurrency === 'INR') return amountInINR;
   const rate = exchangeRates[selectedCurrency.toLowerCase()];
@@ -105,7 +100,7 @@ const popularCurrencies = [
 };
 
   // Fetch expenses for selected month
-  const fetchExpenses = async () => {
+  const fetchExpenses = useCallback(async () => {
     if (!selectedMonth || !selectedYear) return;
     
     try {
@@ -113,7 +108,7 @@ const popularCurrencies = [
       setError(null);
       
       // Load cached data first
-      const cacheKey = getCacheKey();
+      const cacheKey = `expensesData_${selectedYear}_${selectedMonth}`;
       const cachedData = localStorage.getItem(cacheKey);
       if (cachedData) {
         setExpenses(JSON.parse(cachedData));
@@ -158,18 +153,20 @@ const popularCurrencies = [
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedMonth, selectedYear]);
 
   // Fetch data when month/year changes
   useEffect(() => {
     if (selectedMonth && selectedYear) {
       fetchExpenses();
     }
-  }, [selectedMonth, selectedYear]);
+    return subscribeToLocalChanges(fetchExpenses);
+  }, [selectedMonth, selectedYear, fetchExpenses]);
 
 const formatAmount = (amount) => {
   const convertedAmount = convertCurrency(amount);
-  const currencyInfo = popularCurrencies.find(c => c.code === selectedCurrency);
+  const hasRate = selectedCurrency === 'INR' || exchangeRates[selectedCurrency.toLowerCase()];
+  const currencyInfo = popularCurrencies.find(c => c.code === (hasRate ? selectedCurrency : 'INR'));
   
   return new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 0,

@@ -1,279 +1,128 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { User, BarChart3, TrendingUp, TrendingDown, LogOut, Menu, X, DollarSign, PiggyBank } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { authService, tokenManager } from '../api/lib/auth';
+
+import { useEffect, useRef, useState } from 'react';
+import { ArchiveRestore, ChartNoAxesCombined, CircleHelp, CloudOff, Download, LayoutDashboard, Menu, PiggyBank, TrendingDown, TrendingUp, Upload, UserRound, WalletCards, X } from 'lucide-react';
 import DashboardLayout from '../screens/DashboardLayout';
 import IncomeLayout from '../screens/IncomeLayout';
 import ExpenseLayout from '../screens/ExpenseLayout';
 import SavingsLayout from '../screens/SavingsLayout';
 import { useCurrency } from '../context/CurrencyContext';
+import { downloadLocalBackup, getProfileLocal, importLocalBackup, saveProfileLocal } from '../api/utils/localStore';
 
-const Dashboard = () => {
-  return (
-    <div className="p-4 md:p-8">
-        <DashboardLayout/>
-      </div>
-  );
-};
+const sections = [
+  { id: 'dashboard', label: 'Overview', icon: LayoutDashboard, caption: 'Your money at a glance' },
+  { id: 'income', label: 'Income', icon: TrendingUp, caption: 'Track what comes in' },
+  { id: 'expense', label: 'Expenses', icon: TrendingDown, caption: 'Know where it goes' },
+  { id: 'savings', label: 'Savings', icon: PiggyBank, caption: 'Build toward your goals' },
+];
 
-const Income = () => {
-  return (
-    <div className="p-4 md:p-8">
-        <IncomeLayout/>
-    </div>
-  );
-};
-
-const Expense = () => {
-  return (
-    <div className="p-4 md:p-8">
-        <ExpenseLayout/>
-    </div>
-  );
-};
-
-const Savings = () => {
-  return (
-    <div className="p-4 md:p-8">
-        <SavingsLayout/>
-    </div>
-  );
-};
-
-function Home() {
+export default function Home() {
   const [activeSection, setActiveSection] = useState('dashboard');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
-  const { selectedCurrency, changeCurrency, currencies, getCurrencySymbol } = useCurrency();
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser] = useState({ name: 'My account', email: 'Saved on this device' });
+  const [restoreMessage, setRestoreMessage] = useState('');
+  const fileInput = useRef(null);
+  const { selectedCurrency, changeCurrency, currencies } = useCurrency();
 
-  useEffect(() => {
-    const initializeUser = async () => {
-      try {
-        if (!tokenManager.isAuthenticated()) {
-          router.push('/login');
-          return;
-        }
+  useEffect(() => setUser(getProfileLocal()), []);
 
-        const storedUserData = tokenManager.getUserData();
-        if (storedUserData) {
-          setUser(storedUserData);
-          setLoading(false);
-        } else {
-          try {
-            const profileResponse = await authService.getProfile();
-            setUser(profileResponse.user);
-            setLoading(false);
-          } catch (error) {
-            console.error('Error fetching user profile:', error);
-            router.push('/login');
-          }
-        }
-      } catch (error) {
-        console.error('Authentication check failed:', error);
-        router.push('/login');
-      }
-    };
+  const selectSection = (section) => {
+    setActiveSection(section);
+    setSidebarOpen(false);
+  };
 
-    initializeUser();
-  }, [router]);
-
-  const renderContent = () => {
-    switch (activeSection) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'income':
-        return <Income />;
-      case 'expense':
-        return <Expense />;
-      case 'savings':
-        return <Savings />;
-      default:
-        return <Dashboard />;
+  const restoreBackup = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const restored = importLocalBackup(JSON.parse(await file.text()));
+      setUser(getProfileLocal());
+      setRestoreMessage(`${restored} transactions restored on this device.`);
+      window.setTimeout(() => setRestoreMessage(''), 4000);
+    } catch (error) {
+      setRestoreMessage(error.message || 'Could not restore this file.');
+    } finally {
+      event.target.value = '';
     }
   };
 
-  const handleLogout = () => {
-    authService.logout();
+  const editProfile = () => {
+    const name = window.prompt('Name for this local profile', user.name);
+    if (name === null) return;
+    setUser(saveProfileLocal({ ...user, name }));
   };
 
-  const handleNavClick = (section) => {
-    setActiveSection(section);
-    setIsSidebarOpen(false);
-  };
-
-  useEffect(() => {
-    const handleOutsideClick = (event) => {
-      if (isSidebarOpen && !event.target.closest('.sidebar') && !event.target.closest('.hamburger-btn')) {
-        setIsSidebarOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [isSidebarOpen]);
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  const current = sections.find((section) => section.id === activeSection) || sections[0];
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
-      {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 bg-white shadow-sm z-40 h-16 flex items-center justify-between px-4">
-        <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="hamburger-btn p-2 rounded-md hover:bg-gray-100 transition-colors"
-        >
-          {isSidebarOpen ? (
-            <X className="w-6 h-6 text-gray-600" />
-          ) : (
-            <Menu className="w-6 h-6 text-gray-600" />
-          )}
-        </button>
-        <h2 className="text-lg font-semibold text-gray-800 capitalize">
-          {activeSection}
-        </h2>
-        <div className="w-10"></div>
-      </div>
-
-      {/* Mobile Overlay */}
-      {isSidebarOpen && (
-        <div className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40" />
-      )}
-
-      {/* Sidebar */}
-      <div className={`
-         sidebar fixed top-0 left-0 h-screen lg:static lg:h-auto lg:translate-x-0 
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        transition-transform duration-300 ease-in-out
-        w-64 h-full bg-white shadow-lg z-50 lg:z-auto
-        flex flex-col
-      `}>
-        {/* Profile Section */}
-        <div className="p-4 md:p-6 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <User className="w-5 h-5 md:w-6 md:h-6 text-white" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-gray-800 text-sm md:text-base truncate">
-                {user?.name || 'User'}
-              </h3>
-              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-            </div>
-          </div>
+    <main className="app-shell">
+      {isSidebarOpen && <button aria-label="Close navigation" className="sidebar-scrim" onClick={() => setSidebarOpen(false)} />}
+      <aside className={`app-sidebar ${isSidebarOpen ? 'is-open' : ''}`}>
+        <div className="brand-lockup">
+          <div className="brand-mark"><WalletCards size={22} /></div>
+          <div><strong>pocket</strong><span>Money, in focus</span></div>
+          <button className="icon-button sidebar-close" aria-label="Close menu" onClick={() => setSidebarOpen(false)}><X size={19} /></button>
         </div>
 
-        {/* Navigation */}
-        <nav className="p-3 md:p-4 flex-1 overflow-y-auto">
-          <ul className="space-y-2">
-            <li>
-              <button
-                onClick={() => handleNavClick('dashboard')}
-                className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-lg text-left transition-colors ${
-                  activeSection === 'dashboard'
-                    ? 'bg-blue-100 text-blue-700 border-r-4 font-bold border-blue-700'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <BarChart3 className="w-5 h-5 flex-shrink-0" />
-                <span className="font-medium">Dashboard</span>
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => handleNavClick('income')}
-                className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-lg text-left transition-colors ${
-                  activeSection === 'income'
-                    ? 'bg-green-100 text-green-700 border-r-4 border-green-700'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <TrendingUp className="w-5 h-5 flex-shrink-0" />
-                <span className="font-medium">Income</span>
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => handleNavClick('expense')}
-                className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-lg text-left transition-colors ${
-                  activeSection === 'expense'
-                    ? 'bg-red-100 text-red-700 border-r-4 border-red-700'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <TrendingDown className="w-5 h-5 flex-shrink-0" />
-                <span className="font-medium">Expense</span>
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => handleNavClick('savings')}
-                className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-lg text-left transition-colors ${
-                  activeSection === 'savings'
-                    ? 'bg-purple-100 text-purple-700 border-r-4 border-purple-700'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <PiggyBank className="w-5 h-5 flex-shrink-0" />
-                <span className="font-medium">Piggy Bank</span>
-              </button>
-            </li>
-            </ul>
+        <div className="workspace-card">
+          <div className="avatar"><UserRound size={19} /></div>
+          <div className="workspace-copy"><strong>{user.name}</strong><span>Personal workspace</span></div>
+          <button className="profile-edit" title="Edit local profile" onClick={editProfile}>•••</button>
+        </div>
 
-          {/* Currency Switcher */}
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <label className="block text-xs font-medium text-gray-500 mb-2 px-3">
-              Display Currency
-            </label>
-            <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              <select
-                value={selectedCurrency}
-                onChange={(e) => changeCurrency(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
-              >
-                {currencies.map((currency) => (
-                  <option key={currency.code} value={currency.code}>
-                    {currency.symbol} {currency.code} - {currency.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <p className="text-xs text-gray-400 mt-2 px-3">
-              All amounts will be displayed in {selectedCurrency}
-            </p>
-          </div>
+        <p className="nav-label">WORKSPACE</p>
+        <nav className="primary-nav" aria-label="Main navigation">
+          {sections.map(({ id, label, icon: Icon }) => (
+            <button key={id} onClick={() => selectSection(id)} className={`nav-item ${activeSection === id ? 'active' : ''}`} aria-current={activeSection === id ? 'page' : undefined}>
+              <Icon size={18} strokeWidth={1.8} /><span>{label}</span>{id === 'dashboard' && <span className="nav-indicator" />}
+            </button>
+          ))}
         </nav>
 
-        {/* Logout Button */}
-        <div className="p-3 md:p-4 border-t border-gray-200">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-lg text-left text-red-600 hover:bg-red-50 transition-colors"
-          >
-            <LogOut className="w-5 h-5 flex-shrink-0" />
-            <span className="font-medium">Logout</span>
-          </button>
-        </div>
-      </div>
+        <div className="sidebar-spacer" />
+        <section className="currency-panel">
+          <label htmlFor="display-currency">DISPLAY CURRENCY</label>
+          <select id="display-currency" value={selectedCurrency} onChange={(event) => changeCurrency(event.target.value)}>
+            {currencies.map((currency) => <option key={currency.code} value={currency.code}>{currency.symbol} {currency.code}</option>)}
+          </select>
+          <p>Saved in INR · display conversion needs internet.</p>
+        </section>
 
-      {/* Main Content */}
-      <div className="flex-1 lg:ml-0 pt-16 lg:pt-0">
-        {renderContent()}
-      </div>
-    </div>
+        <div className="backup-panel">
+          <div className="backup-icon"><ArchiveRestore size={17} /></div>
+          <div><strong>Your data stays here</strong><span>Only you can access this device’s records.</span></div>
+          <button onClick={downloadLocalBackup} className="backup-link"><Download size={14} /> Export backup</button>
+          <button onClick={() => fileInput.current?.click()} className="backup-link"><Upload size={14} /> Restore backup</button>
+          <input ref={fileInput} type="file" accept="application/json,.json" onChange={restoreBackup} hidden />
+        </div>
+
+        <div className="sidebar-footnote"><CloudOff size={15} /><span>Works without an account or internet</span></div>
+      </aside>
+
+      <section className="app-main">
+        <header className="topbar">
+          <button className="icon-button mobile-menu" aria-label="Open menu" onClick={() => setSidebarOpen(true)}><Menu size={21} /></button>
+          <div className="breadcrumb"><span>Workspace</span><span className="crumb-divider">/</span><strong>{current.label}</strong></div>
+          <div className="topbar-actions"><span className="local-status"><span /> Saved on this device</span><button className="icon-button help-button" title="Local mode" onClick={() => window.alert('Your transactions and preferences are stored on this device. Use Export backup to move a copy elsewhere.')}><CircleHelp size={18} /></button></div>
+        </header>
+
+        <div className="content-wrap">
+          <div className="page-heading">
+            <div><p className="eyebrow">{new Intl.DateTimeFormat('en', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date())}</p><h1>{activeSection === 'dashboard' ? 'Your money, made clear.' : current.label}</h1><p className="page-subtitle">{activeSection === 'dashboard' ? 'A calm look at where you are and what’s next.' : current.caption}</p></div>
+            <div className="heading-illustration"><ChartNoAxesCombined size={24} /></div>
+          </div>
+          {restoreMessage && <div className="restore-notice" role="status">{restoreMessage}</div>}
+          {activeSection === 'dashboard' && <DashboardLayout />}
+          {activeSection === 'income' && <IncomeLayout />}
+          {activeSection === 'expense' && <ExpenseLayout />}
+          {activeSection === 'savings' && <SavingsLayout />}
+          <footer className="content-footer"><span>Private by design · Stored on this device</span><span>pocket · Personal finance</span></footer>
+        </div>
+      </section>
+
+      <nav className="mobile-nav" aria-label="Quick navigation">
+        {sections.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => selectSection(id)} className={activeSection === id ? 'active' : ''}><Icon size={19} /><span>{label === 'Overview' ? 'Home' : label}</span></button>)}
+      </nav>
+    </main>
   );
 }
-
-export default Home;
