@@ -23,22 +23,7 @@ const IncomeSourcesCard = () => {
     setSelectedYear(currentYear);
   }, []);
 
-  useEffect(() => {
-    const fetchExchangeRates = async () => {
-      try {
-        setCurrenciesLoading(true);
-        const response = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/inr.json');
-        const data = await response.json();
-        setExchangeRates(data.inr || {});
-      } catch (err) {
-        console.error('Error fetching exchange rates:', err);
-      } finally {
-        setCurrenciesLoading(false);
-      }
-    };
-
-    fetchExchangeRates();
-  }, []);
+  useEffect(() => { setExchangeRates({ inr: 1 }); setCurrenciesLoading(false); }, []);
 
   // Generate year options (current year and past 5 years)
   const generateYearOptions = () => {
@@ -66,23 +51,7 @@ const IncomeSourcesCard = () => {
     { value: '12', label: 'December' }
   ];
 
-const popularCurrencies = [
-    { code: 'PHP', name: 'Philippine Peso', symbol: '₱' },
-    { code: 'IDR', name: 'Indonesian Rupiah', symbol: 'Rp' },
-    { code: 'MYR', name: 'Malaysian Ringgit', symbol: 'RM' },
-    { code: 'THB', name: 'Thai Baht', symbol: '฿' },
-    { code: 'VND', name: 'Vietnamese Dong', symbol: '₫' },
-    { code: 'USD', name: 'US Dollar', symbol: '$' },
-    { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$' },
-    { code: 'JPY', name: 'Japanese Yen', symbol: '¥' },
-    { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
-    { code: 'EUR', name: 'Euro', symbol: '€' },
-    { code: 'GBP', name: 'British Pound', symbol: '£' },
-    { code: 'AUD', name: 'Australian Dollar', symbol: 'A$' },
-    { code: 'CHF', name: 'Swiss Franc', symbol: 'Fr' },
-    { code: 'CNY', name: 'Chinese Yuan', symbol: '¥' },
-    { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$' }
-  ];
+const popularCurrencies = [{ code: 'INR', name: 'Indian Rupee', symbol: '₹' }];
 
   // Get date range for selected month/year
   const getMonthDateRange = (month, year) => {
@@ -105,14 +74,6 @@ const popularCurrencies = [
     try {
       setLoading(true);
       setError(null);
-      
-      // Load cached data first
-      const cacheKey = `incomeSourcesData_${selectedYear}_${selectedMonth}`;
-      const cachedData = localStorage.getItem(cacheKey);
-      if (cachedData) {
-        setIncomeSources(JSON.parse(cachedData));
-        setLoading(false);
-      }
       
       // Fetch fresh data in background
       const { startDate, endDate } = getMonthDateRange(selectedMonth, selectedYear);
@@ -144,8 +105,6 @@ const popularCurrencies = [
 
       setIncomeSources(incomeArray);
       
-      // Cache the fresh data
-      localStorage.setItem(cacheKey, JSON.stringify(incomeArray));
     } catch (err) {
       setError(err.message);
       console.error('Error fetching income sources:', err);
