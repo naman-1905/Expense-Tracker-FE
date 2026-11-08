@@ -33,7 +33,7 @@ const SavingsSourcesCard = ({ startDate, endDate, onTotalUpdate, onLoadingChange
       if (onLoadingChange) onLoadingChange(true);
       setError(null);
 
-      const sources = getTransactionsLocal().filter((transaction) => {
+      const sources = (await getTransactionsLocal()).filter((transaction) => {
         if (transaction.type !== 'savings') return false;
         const date = new Date(transaction.date).getTime();
         return (!startDate || date >= new Date(startDate).getTime())
@@ -42,7 +42,7 @@ const SavingsSourcesCard = ({ startDate, endDate, onTotalUpdate, onLoadingChange
       const grouped = sources.reduce((result, transaction) => {
         const key = transaction.name;
         result[key] ||= { name: key, emoji: transaction.emoji || '🐷', amount: 0, count: 0 };
-        result[key].amount += Number(transaction.amount);
+        result[key].amount += Number(transaction.amount) * (transaction.direction === 'withdrawal' ? -1 : 1);
         result[key].count += 1;
         return result;
       }, {});
@@ -111,13 +111,13 @@ const SavingsSourcesCard = ({ startDate, endDate, onTotalUpdate, onLoadingChange
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 sm:p-6 pb-4 border-b border-gray-100">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-1">Savings Sources</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-1">Saved Contributions</h2>
           <p className="text-xs text-gray-400">{periodText}</p>
         </div>
 
         <div className="flex w-full sm:w-auto gap-2">
           <button onClick={() => setShowAdd((value) => !value)} className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-700">
-            {showAdd ? <X size={16} /> : <Plus size={16} />}<span>{showAdd ? 'Close' : 'Add savings'}</span>
+            {showAdd ? <X size={16} /> : <Plus size={16} />}<span>{showAdd ? 'Close' : 'Add unallocated savings'}</span>
           </button>
           <button onClick={downloadExcel} disabled={sources.length === 0} className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">
             <Download size={16} /><span>Export</span>
