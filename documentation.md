@@ -1,81 +1,88 @@
 # Pocket Finance: Current Feature Documentation
 
-## What the app is
+## Overview
 
-Pocket Finance is a personal expense and income notebook built with Next.js and packaged for Android with Ionic Capacitor. It opens directly into a local workspace; there is no login flow in the current frontend.
+Pocket Finance is a personal finance notebook built with Next.js and packaged for Android with Ionic Capacitor. It opens into a local workspace without an account or login. The frontend is self-contained for normal app use and does not depend on the FastAPI backend.
 
-Financial transactions and the local profile are stored on the device using browser `localStorage` (including the Android WebView’s local storage). The frontend does not send transactions to the FastAPI backend. Browser data and Android app data are separate and do not sync automatically.
+The UI uses a quiet, light workspace with violet highlights, desktop sidebar and compact mobile navigation. The savings section is designed around personal goals such as a plane ticket, emergency fund, or laptop.
 
-## Current features
+## Data storage and privacy
 
-### Overview
+- Android stores finance records in a SQLite database in the app’s private storage. The Capacitor SQLite plugin provides the native implementation.
+- Browser use stores the same SQLite schema through `jeep-sqlite` / SQL.js in IndexedDB. Browser and Android records are separate and do not sync automatically.
+- The schema currently covers profiles, cash accounts, categories, transactions, savings plans, contributions, budgets, reminder and recurring-rule placeholders, and backup metadata.
+- The app has no normal transaction API, account service, analytics integration, or runtime network fetch. The web Content Security Policy allows same-origin connections only. Android removes the Internet permission, blocks cleartext traffic, and disables Android backup/device-transfer inclusion for app data.
+- Older installations may have browser localStorage records. The app imports those once into SQLite, reports read/written counts, and leaves the original keys in place until the person confirms the migration notice. After confirmation, the old copies are removed.
+- Local database contents are **not encrypted by this app**. Android’s app-private sandbox and browser IndexedDB have platform protections, but this is not the same as database encryption. App lock and SQLCipher are not implemented.
+- Clearing browser site data or Android app data can erase records. Android cloud/device transfer backup is disabled in this build. Export a backup before clearing data, changing devices, or uninstalling.
 
-- Shows total income, total expenses, and the current balance derived from locally stored records.
-- Displays a financial overview chart, balance, savings-rate and expense-ratio indicators, and recent transactions.
-- Offers a refresh action and a recent-activity time filter.
+## Overview screen
 
-### Income
+- Shows local income, expense, and balance summaries.
+- Displays chart-based overview and recent activity from records stored on the device.
+- Provides the responsive dashboard workspace and local-mode status.
+- Savings contributions are tracked separately from income and expenses so they are not counted twice in the cash balance.
 
-- Add an income record with a description, amount, date/time, and emoji.
-- Review income activity in a chart grouped by day and in source totals grouped by description for a selected month.
-- Filter source totals by month and year and export the report as an XLSX spreadsheet.
+## Income
 
-### Expenses
+- Add income with a title, amount, date/time, and emoji.
+- View locally calculated income charts and source totals by date range.
+- Export income source reports as XLSX.
+- Values are currently entered and displayed in INR.
 
-- Add an expense record with a description, amount, date/time, and emoji.
-- Review expense activity in a chart grouped by day and in category/source totals grouped by description for a selected month.
-- Filter source totals by month and year and export the report as an XLSX spreadsheet.
+## Expenses
 
-### Recent transactions
+- Add an expense with a title, amount, date/time, and emoji.
+- View local expense charts and source totals by date range.
+- Export expense source reports as XLSX.
+- Values are currently entered and displayed in INR.
 
-- Browse locally stored income, expense, and savings records.
-- Filter activity to the last 7, 30, 60, or 365 days, or enter a custom date range.
-- Delete a record after a confirmation prompt.
-- Records are ordered newest first. Amounts use the selected display currency when a rate is available.
+## Recent activity
 
-### Savings
+- Browse local income, expense, and savings contribution records.
+- Use the available recent-activity date filters and custom ranges, and search loaded records by description, note, or type.
+- Edit the description and amount, duplicate a record, or delete it after a confirmation prompt. A short-lived undo action can restore the latest deletion during the current app session.
+- Records are ordered newest first. Search covers the loaded date range (up to 100 records); full-history search, date/category/account/type filters, richer edits, and durable undo are not implemented.
 
-- Add a savings record with a plan/source name and amount.
-- Group contributions by name and show total amount and contribution count for each name.
-- Export savings sources to XLSX.
-- The current savings target card displays a target and date-range editor, but it is not connected to saved data or linked to contributions yet. Its target uses temporary component state and resets when the view is recreated. Named, persistent savings plans and their progress are planned; see [plan.md](./plan.md).
+## Savings plans
 
-### Personalization and settings
+- Create a personal goal with a name, target amount, optional date, optional note, and icon. Examples include “Save for a plane ticket,” “Emergency fund,” or “New laptop.”
+- The savings view shows saved amount, remaining amount, percentage progress, and target date.
+- Add dated contributions to a plan and attach a note such as “from this week’s pay.” A withdrawal can also be recorded with its own note.
+- Recent plan activity remains attached to the plan and updates its total when a contribution is added or deleted.
+- Edit a plan’s name or target amount. Archive with confirmation; past contributions become unallocated savings instead of being discarded.
+- The empty state offers example goals that prefill a new plan form; these suggestions are not saved as real records unless the person creates the plan.
+- The unallocated savings card can capture savings that do not yet have a plan and export a source report. Splitting or assigning an unallocated amount to a plan is planned but not yet available.
+- Editing a contribution, reminders, and recurring savings actions are not yet implemented.
 
-- Change the local profile display name from the workspace menu.
-- Choose a preferred display currency. Records are stored in INR; current conversion rates are requested from a third-party CDN when available. If rates cannot be loaded, amounts display in INR.
-- The interface includes desktop navigation, a mobile navigation bar, a local-storage status, and an offline-use indicator.
+## Profile and currency
 
-### Backup and restore
+- Set a display name for the local profile.
+- The app currently records and displays all values in INR. Currency conversion is disabled and no exchange-rate request is made.
+- Multi-currency entry and manual conversion rates are future work; saved values should remain in their original currency if introduced.
 
-- Export the profile and transactions as a versioned JSON backup file.
-- Restore a compatible backup from a JSON file. The app validates the basic transaction structure before replacing its current transaction list.
-- Import replaces the existing transaction list; export or preserve a separate backup before restoring if the current records matter.
-- The person chooses where to save or share an exported file. The app itself does not upload the backup.
+## Backup and restore
 
-### Reports and downloads
+- Export creates a versioned JSON file locally with the profile, transactions, savings plans, contributions, accounts, categories, and budgets.
+- The app does not upload this backup. The person chooses where to save or share it; the generated JSON is plain text and may contain sensitive financial records.
+- Restore validates the backup sections before changing data and asks the person to **merge** with current records or **replace** local transactions, savings plans, budgets, accounts, and categories.
+- Merge keeps existing records and skips transaction IDs already present. Replace is destructive; the choice is presented before it begins. Database changes are applied as one transaction.
+- Encrypted backup files, scheduled backups, and a dedicated privacy/erase page are not available yet.
 
-- Income sources, expense categories, and savings sources can be downloaded as XLSX spreadsheets.
-- JSON backup is available for moving the full local profile and transaction list between installations.
+## Android and web development
 
-## Privacy and network behavior
+- Next.js is configured to statically export the frontend. SQLite’s SQL.js WASM file is copied into `public/assets` before build.
+- Run `npm run dev` for local development.
+- Run `npm run build:mobile` to make the static production build.
+- Run `npm run cap:sync:android` to build and copy the app into the Android project.
+- Run `npm run android` to sync and open the project in Android Studio. Android Studio and an Android SDK are required to produce/install an APK.
 
-- There is no frontend account service, backend route handler, database connection, cloud sync, or analytics integration in normal transaction flows.
-- Transaction, savings, and profile records stay in local app storage unless the person explicitly exports a file and chooses to share it.
-- Currency conversion currently makes optional requests to a public CDN for exchange-rate data. These requests do not include transaction or profile records. Removing all runtime network requests is part of the privacy roadmap.
-- Local storage is not encrypted by the app. Anyone with access to an unlocked device and its app/browser storage may be able to access the records. App lock and encrypted backups are future improvements.
-- Clearing browser or Android app storage can erase local records. Export backups before clearing storage or changing devices.
+## Known limitations
 
-## Android and web builds
+- Full-history search, category/account/date/type filters, richer transaction editing, and durable undo are not implemented.
+- Savings contribution editing and split allocation from unallocated funds are not implemented.
+- User-defined categories/accounts, category budgets, recurring entries, local reminders, app lock, SQLCipher encryption, and encrypted backups are not implemented.
+- Currency is INR only and there is no conversion.
+- Android runtime behavior, storage failure recovery, large histories, TalkBack, and 200% text scaling still need device verification.
 
-- The web interface runs through Next.js and can be served as a static export.
-- The Android wrapper is scaffolded with Capacitor. Run `npm run cap:sync:android` to generate the web export and copy it into the native project.
-- Android Studio and an Android SDK are needed to produce and install an APK. See the setup steps in [README.md](./README.md).
-
-## Current limitations
-
-- Savings plans are not yet first-class records: there is no persistent target, contribution-to-plan link, remaining balance, due date, or per-plan history.
-- The savings target card is not wired to the savings list and its target is not persistent.
-- Individual transaction editing, search, user-defined categories/accounts, budgets, recurring templates, biometric lock, and encrypted database storage are not implemented.
-- Currency conversion requires a network connection; INR entry and core finance views remain available locally.
-- Backup restore currently replaces the transaction list rather than offering merge/replace choices.
+See [plan.md](./plan.md) for the delivery roadmap and acceptance checklist.
