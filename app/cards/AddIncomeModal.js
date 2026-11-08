@@ -4,23 +4,7 @@ import { createTransaction } from '../api/utils/transactionAPI';
 
 const EMOJIS = ['💰', '💵', '🪙', '📈', '🏦', '💳', '🎁', '💸'];
 
-const CURRENCIES = [
-  { code: 'php', symbol: '₱', name: 'Philippine Peso' },
-  { code: 'idr', symbol: 'Rp', name: 'Indonesian Rupiah' },
-  { code: 'myr', symbol: 'RM', name: 'Malaysian Ringgit' },
-  { code: 'thb', symbol: '฿', name: 'Thai Baht' },
-  { code: 'vnd', symbol: '₫', name: 'Vietnamese Dong' },
-  { code: 'usd', symbol: '$', name: 'US Dollar' },
-  { code: 'cad', symbol: 'C$', name: 'Canadian Dollar' },
-  { code: 'jpy', symbol: '¥', name: 'Japanese Yen' },
-  { code: 'inr', symbol: '₹', name: 'Indian Rupee' },
-  { code: 'eur', symbol: '€', name: 'Euro' },
-  { code: 'gbp', symbol: '£', name: 'British Pound' },
-  { code: 'aud', symbol: 'A$', name: 'Australian Dollar' },
-  { code: 'chf', symbol: 'Fr', name: 'Swiss Franc' },
-  { code: 'cny', symbol: '¥', name: 'Chinese Yuan' },
-  { code: 'aed', symbol: 'د.إ', name: 'UAE Dirham' },
-];
+const CURRENCIES = [{ code: 'inr', symbol: '₹', name: 'Indian Rupee' }];
 
 const AddIncomeModal = ({ isOpen, onClose, onAddIncome }) => {
   const [selectedEmoji, setSelectedEmoji] = useState('💰');
@@ -81,65 +65,9 @@ const AddIncomeModal = ({ isOpen, onClose, onAddIncome }) => {
   }, [amount, selectedCurrency, exchangeRates]);
 
   const fetchExchangeRates = async () => {
-    setIsLoadingRates(true);
-    try {
-      // Fetch rates for all currencies we support
-      const ratesData = {};
-      
-      // INR is base, so rate is 1
-      ratesData['inr'] = 1;
-      
-      // Get the base API URL from environment variable (Next.js format)
-      const baseApiUrl = process.env.NEXT_PUBLIC_CURRENCY_API;
-      
-      if (!baseApiUrl) {
-        console.error('NEXT_PUBLIC_CURRENCY_API not configured');
-        setExchangeRates({ inr: 1 });
-        setSelectedCurrency('inr');
-        setIsLoadingRates(false);
-        return;
-      }
-      
-      // Extract the base URL (remove /usd.json if present)
-      const baseUrl = baseApiUrl.replace(/\/[a-z]{3}\.json$/, '');
-      
-      // Fetch rates for other currencies to INR
-      for (const currency of CURRENCIES) {
-        if (currency.code !== 'inr') {
-          try {
-            // Construct the URL for each currency
-            const apiUrl = `${baseUrl}/${currency.code}.json`;
-            const response = await fetch(apiUrl);
-            const data = await response.json();
-            
-            // FIX: Check the actual structure of the data
-            // The API might return: { [currency.code]: { inr: rate } }
-            // Or it might return: { inr: rate }
-            if (data && typeof data === 'object') {
-              if (data[currency.code] && data[currency.code]['inr']) {
-                ratesData[currency.code] = data[currency.code]['inr'];
-              } else if (data['inr']) {
-                ratesData[currency.code] = data['inr'];
-              } else {
-                console.warn(`Unexpected data structure for ${currency.code}:`, data);
-              }
-            }
-          } catch (err) {
-            console.error(`Error fetching rate for ${currency.code}:`, err);
-          }
-        }
-      }
-      
-      setExchangeRates(ratesData);
-    } catch (error) {
-      console.error('Error fetching exchange rates:', error);
-      setError('Failed to load currency rates. Using INR only.');
-      // Fallback to INR only
-      setExchangeRates({ inr: 1 });
-      setSelectedCurrency('inr');
-    } finally {
-      setIsLoadingRates(false);
-    }
+    setExchangeRates({ inr: 1 });
+    setSelectedCurrency('inr');
+    setIsLoadingRates(false);
   };
 
   const formatDateTimeForDisplay = (date, time) => {
