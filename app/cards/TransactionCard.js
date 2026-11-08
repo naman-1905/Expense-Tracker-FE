@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Calendar, Filter, Trash2 } from 'lucide-react';
+import { Calendar, Copy, Filter, Pencil, Search, Trash2 } from 'lucide-react';
 import { getRecentTransactions, getTransactionsDateRange } from '../api/utils/historyAPI';
-import { deleteTransaction } from '../api/utils/transactionAPI';
+import { createTransaction, deleteTransaction, restoreTransaction, updateTransaction } from '../api/utils/transactionAPI';
 import { useCurrency } from '../context/CurrencyContext';
 import { subscribeToLocalChanges } from '../api/utils/localStore';
 
@@ -15,6 +15,8 @@ const TransactionCard = () => {
   const [endDate, setEndDate] = useState('');
   const [customDateMode, setCustomDateMode] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [searchText, setSearchText] = useState('');
+  const [undoRecord, setUndoRecord] = useState(null);
   const { formatAmount } = useCurrency();
 
   // Period options
@@ -65,9 +67,11 @@ const TransactionCard = () => {
 
     setDeletingId(transactionId);
     try {
-      await deleteTransaction(transactionId);
+      const deleted = await deleteTransaction(transactionId);
       // Remove the deleted transaction from the list
       setTransactions(prev => prev.filter(t => t.transaction_id !== transactionId));
+      setUndoRecord(deleted);
+      window.setTimeout(() => setUndoRecord((record) => record?.transaction_id === transactionId ? null : record), 7000);
     } catch (err) {
       console.error('Error deleting transaction:', err);
       alert('Failed to delete transaction. Please try again.');
@@ -75,6 +79,34 @@ const TransactionCard = () => {
       setDeletingId(null);
     }
   };
+
+  const handleEditTransaction = async (transaction) => {
+    const name = window.prompt('Description', transaction.name);
+    if (name === null) return;
+    const amountText = window.prompt('Amount in INR', String(transaction.amount));
+    if (amountText === null) return;
+    const amount = Number(amountText);
+    if (!Number.isFinite(amount) || amount <= 0) { window.alert('Enter an amount greater than zero.'); return; }
+    try {
+      await updateTransaction(transaction.transaction_id, { name: name.trim(), amount });
+      await fetchTransactions();
+    } catch (editError) { window.alert(editError.message || 'Could not update this transaction.'); }
+  };
+
+  const handleDuplicateTransaction = async (transaction) => {
+    try {
+      await createTransaction({ name: `${transaction.name} (copy)`, amount: transaction.amount, type: transaction.type, emoji: transaction.emoji, date: new Date().toISOString(), note: transaction.note, plan_id: transaction.plan_id, direction: transaction.direction });
+      await fetchTransactions();
+    } catch (duplicateError) { window.alert(duplicateError.message || 'Could not duplicate this transaction.'); }
+  };
+
+  const undoDelete = async () => {
+    if (!undoRecord) return;
+    try { await restoreTransaction(undoRecord); setUndoRecord(null); await fetchTransactions(); }
+    catch (restoreError) { window.alert(restoreError.message || 'Could not restore this transaction.'); }
+  };
+
+  const visibleTransactions = transactions.filter((transaction) => `${transaction.name} ${transaction.note || ''} ${transaction.type}`.toLocaleLowerCase().includes(searchText.trim().toLocaleLowerCase()));
 
   // Initial load and when period changes
   useEffect(() => {
@@ -141,6 +173,10 @@ const TransactionCard = () => {
         </div>
       </div>
 
+      <div className="transaction-search"><Search size={15} /><input aria-label="Search transactions" value={searchText} onChange={(event) => setSearchText(event.target.value)} placeholder="Search descriptions or notes" /></div>
+
+      {undoRecord && <div className="transaction-undo" role="status"><span>“{undoRecord.name}” deleted</span><button onClick={undoDelete}>Undo</button></div>}
+
       {/* Custom Date Picker */}
       {showDatePicker && (
         <div className="px-6 py-3 bg-gray-50 border-b border-gray-100">
@@ -187,17 +223,17 @@ const TransactionCard = () => {
               <p className="text-xs mt-1">{error}</p>
             </div>
           </div>
-        ) : transactions.length === 0 ? (
+        ) : visibleTransactions.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-gray-500 text-center">
-              <p className='font-bold'>No transactions found</p>
-              <p className="text-xs mt-1">Try adjusting your date range</p>
+              <p className='font-bold'>{searchText ? 'No matching transactions' : 'No transactions found'}</p>
+              <p className="text-xs mt-1">{searchText ? 'Try another search.' : 'Try adjusting your date range'}</p>
             </div>
           </div>
         ) : (
           <div className="h-full overflow-y-auto px-6 py-2">
             <div className="space-y-3">
-              {transactions.map((transaction) => (
+              {visibleTransactions.map((transaction) => (
                 <div 
                   key={transaction.transaction_id} 
                   className="group flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors duration-150"
@@ -219,6 +255,8 @@ const TransactionCard = () => {
 
                   {/* Right side: Amount and Delete Button */}
                   <div className="flex items-center space-x-3">
+                    <button onClick={() => handleEditTransaction(transaction)} title="Edit transaction" aria-label={`Edit ${transaction.name}`} className="transaction-row-action"><Pencil size={13} /></button>
+                    <button onClick={() => handleDuplicateTransaction(transaction)} title="Duplicate transaction" aria-label={`Duplicate ${transaction.name}`} className="transaction-row-action"><Copy size={13} /></button>
                     <div className="text-right">
                       <p className={`font-semibold text-sm ${
                         transaction.type === 'expense' ? 'text-red-600' : 'text-green-600'
@@ -252,7 +290,7 @@ const TransactionCard = () => {
       {!loading && !error && transactions.length > 0 && (
         <div className="px-6 py-3 border-t border-gray-100 bg-gray-50">
           <p className="text-xs text-gray-600 text-center">
-            Showing {transactions.length} transactions
+            Showing {visibleTransactions.length} of {transactions.length} transactions
             {customDateMode && startDate && endDate && (
               <span> from {formatDate(startDate)} to {formatDate(endDate)}</span>
             )}
