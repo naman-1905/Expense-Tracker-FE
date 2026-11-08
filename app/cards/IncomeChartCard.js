@@ -20,13 +20,6 @@ const IncomeChartCard = () => {
       setLoading(true);
       setError(null);
       
-      // Load cached data first
-      const cachedData = localStorage.getItem('incomeChartData');
-      if (cachedData) {
-        setIncomeData(JSON.parse(cachedData));
-        setLoading(false);
-      }
-      
       // Fetch fresh data in background
       const data = await getRecentTransactions(10, 100);
       
@@ -50,8 +43,6 @@ const IncomeChartCard = () => {
 
       setIncomeData(chartData);
       
-      // Cache the fresh data
-      localStorage.setItem('incomeChartData', JSON.stringify(chartData));
     } catch (err) {
       setError(err.message);
       console.error('Error fetching income data:', err);
