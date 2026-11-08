@@ -20,3 +20,9 @@
 - Added the Android Studio / SDK workflow and data portability notes.
 - Ran `npm run cap:sync:android`: Next.js static export completed, then Capacitor copied the web app and synced Android successfully with no lint warnings.
 - Backend repo is pushed on `main`; the frontend work log and implementation are being pushed on `main` in this change.
+
+## 2026-11-08 documentation update
+
+- Replaced the migration checklist in `plan.md` with a product roadmap for a private, phone-first personal finance notebook.
+- Added `documentation.md` describing current screens, records, filters, reports, local storage, backup/restore, network behavior, and known limitations.
+- The roadmap prioritizes durable on-device storage, named savings plans (for example, a plane ticket), linked contributions, offline completeness, and privacy protections.
