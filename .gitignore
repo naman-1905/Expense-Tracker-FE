@@ -16,6 +16,7 @@
 # next.js
 /.next/
 /out/
+/public/assets/sql-wasm.wasm
 
 # production
 /build
