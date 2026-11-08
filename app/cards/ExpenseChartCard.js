@@ -20,13 +20,6 @@ const ExpenseChartCard = () => {
       setLoading(true);
       setError(null);
       
-      // Load cached data first
-      const cachedData = localStorage.getItem('expenseChartData');
-      if (cachedData) {
-        setExpenseData(JSON.parse(cachedData));
-        setLoading(false);
-      }
-      
       // Fetch fresh data in background
       const data = await getRecentTransactions(10, 100);
       
@@ -50,8 +43,6 @@ const ExpenseChartCard = () => {
 
       setExpenseData(chartData);
       
-      // Cache the fresh data
-      localStorage.setItem('expenseChartData', JSON.stringify(chartData));
     } catch (err) {
       setError(err.message);
       console.error('Error fetching expense data:', err);
