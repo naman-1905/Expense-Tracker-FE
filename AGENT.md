@@ -26,3 +26,16 @@
 - Replaced the migration checklist in `plan.md` with a product roadmap for a private, phone-first personal finance notebook.
 - Added `documentation.md` describing current screens, records, filters, reports, local storage, backup/restore, network behavior, and known limitations.
 - The roadmap prioritizes durable on-device storage, named savings plans (for example, a plane ticket), linked contributions, offline completeness, and privacy protections.
+
+## 2026-11-08 — Revision 2 implementation
+
+- Adopted the supplied Revision 2 storage proposal: Capacitor SQLite on Android and the plugin’s `jeep-sqlite`/SQL.js IndexedDB store on web, using one schema and one local query layer.
+- Added version 1 schema and database initialization, atomic write batches, browser persistence, and a one-time migration from the previous transaction/profile localStorage keys. Migration data is checked and the old copy remains until a person confirms the review notice.
+- Removed currency CDN usage and remote transaction dependencies. INR is the only supported transaction/display currency at this stage. CSP, Android Internet permission removal, cleartext restrictions, and Android backup exclusion reinforce the local-only product direction.
+- Added versioned local JSON backup, validation, and explicit merge/replace restore choices. Restore operations are atomic.
+- Replaced the temporary savings target with persisted named savings plans, targets, progress, target dates, contribution/withdrawal history, archive, and starter goal ideas. Unallocated savings remain available; split allocation and contribution editing remain roadmap items.
+- Replaced `plan.md` with the Revision 2 product roadmap and updated `documentation.md` to describe actual current behavior and known gaps.
+- Aligned SQL.js to 1.11.0, the version documented by `jeep-sqlite` 2.8.0, after browser startup exposed a WebAssembly mismatch with 1.15.2.
+- Added local recent-activity search, description/amount editing, duplicate action, and a short-lived undo for the latest deletion. Updated the plan and current-feature documentation to distinguish those capabilities from remaining full-history/category/account filters and richer editing.
+- Verification passed: `npm run lint`, `npm run build:mobile`, `npm run cap:sync:android`, and `git diff --check`. The frontend source scan found no runtime fetch/Axios or remote URLs; the only localStorage access is the explicit legacy migration/review flow.
+- Browser verification initially caught and then confirmed resolution of the SQL.js WASM startup issue. Pocket Finance opened and completed local database initialization. A physical Android handset walkthrough and packet-capture verification remain necessary for full device-level acceptance.
