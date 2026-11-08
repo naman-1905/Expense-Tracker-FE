@@ -1,115 +1,125 @@
-# Pocket Finance: Product Improvement Plan
+# Pocket Finance: Product Improvement Plan (Revision 2)
 
 ## Product goal
 
-Make Pocket Finance feel like a personal finance notebook that lives on one person’s phone. People should be able to record money in and out, create named savings plans, and understand progress without making an account or connecting to a service.
+Pocket Finance is a personal finance notebook that lives on one person’s device. It should help people record money in and out, give savings a personal purpose, and understand progress without an account, a server, or a network connection. The supplied visual references guide the visual direction: calm layouts, soft violet accents, generous spacing, personal goal cards, and clear mobile navigation.
 
-## Non-negotiable privacy rules
+## Non-negotiable principles
 
-- Financial records, savings plans, profile details, preferences, and app analytics stay on the person’s device. Never send them to a server, API, analytics SDK, crash reporter, or third party.
-- Do not add accounts, cloud sync, remote databases, or advertising trackers.
-- Make every core flow work in airplane mode. Avoid network requirements for charts, search, exports, currency display, app startup, and onboarding.
-- Store data in the Android app’s private local database. For the web version, use browser-local storage with equivalent behavior. Keep web and phone data separate unless the person explicitly exports and imports a backup.
-- Backups are generated on the device. Explain that a file leaves the app only when the person chooses where to save or share it.
-- Treat OS backups and device transfers as platform-controlled behavior; document how to keep or exclude app data where Android supports it.
+- Transactions, savings plans, profile details, preferences, and analytics stay on the device. The app does not send them to a server, API, analytics service, or crash reporter.
+- No login, cloud sync, remote database, or advertising tracker.
+- Core flows work offline. Fonts, icons, charts, and database assets ship with the app.
+- An export leaves the app only when the person explicitly saves or shares the generated file.
+- Confirm destructive actions and make backup/restore choices explicit.
+- Be honest that local storage is not encrypted by this app. Web storage and Android private-app storage have different platform protections.
 
-## Current foundation
+## Architecture and storage
 
-The app already has a local-first Next.js interface, Capacitor Android scaffolding, income and expense records, local summaries, charts, filters, spreadsheet export, a basic savings entry, and JSON backup/restore. Today, records use `localStorage`; this is a useful prototype but has browser storage limits and is not encrypted by the app. The currency-rate feature still requests rates from a CDN. The savings target card is not wired to saved state or savings records yet.
+The Next.js frontend is the product app; the separate backend is not used by the normal frontend experience. Android is packaged with Capacitor. The frontend uses `@capacitor-community/sqlite` on Android and its `jeep-sqlite` / SQL.js web implementation backed by IndexedDB in browsers. The same SQL schema and repository functions are used on both platforms. Web data and Android app data remain separate unless a person exports and restores a backup.
 
-## Product principles
+The schema is versioned and currently at version 1. It includes `schema_migrations`, `app_meta`, `profiles`, `accounts`, `categories`, `transactions`, `savings_plans`, `contributions`, `budgets`, `reminders`, `recurring_rules`, and `backup_metadata`. Indexes cover transaction date/account and plan contribution history. Migrations are forward-only; any future destructive change needs a reviewed migration and a backup path.
 
-1. **Write it down quickly:** logging a purchase or contribution should take a few taps.
-2. **Make plans personal:** use the person’s own goal names, dates, target amounts, and notes rather than fixed categories.
-3. **Show the story:** balance, monthly totals, upcoming plans, and recent activity should be easy to understand at a glance.
-4. **Private by default:** local storage is the only normal data path; sharing or exporting is always a deliberate user action.
-5. **Clear, forgiving records:** support edits, undo, and clear confirmation before destructive actions.
+The old `expense_tracker_transactions_v1` and profile localStorage keys are read once during database initialization. Records are validated and inserted inside a transaction, duplicate IDs or invalid rows stop the migration, and read/written counts are recorded. The old keys remain untouched until a person confirms the migration review in the app. No normal reads or writes use localStorage after migration.
 
-## Roadmap
+Currency conversion has no network path. The current app records and displays INR only. If additional currencies are added, the entered currency/amount must remain the source of truth; conversion should use an explicitly entered manual rate with an as-of date or show the original currency. Never fetch exchange rates at runtime.
 
-### 1. Make phone storage dependable
+## Current implementation status
 
-- Replace `localStorage` as the primary Android store with a local database such as SQLite through a Capacitor plugin. Keep the database inside the app’s private sandbox.
-- Define a versioned data model and migrations for profiles, accounts, transactions, savings plans, contributions, preferences, and backup metadata.
-- Add a web storage adapter for browser use. Both adapters implement the same local repository interface; neither can make network requests.
-- Import the existing `expense_tracker_transactions_v1` and profile keys into the new schema once, verify the imported count, and retain a rollback backup until the person confirms completion.
-- Handle storage-full, corrupt-backup, upgrade, and restore failures with clear messages and no silent data loss.
+### Delivered in this work
 
-### 2. Add named savings plans
+- **On-device SQLite foundation:** one local database implementation for Android and web, schema v1, change notifications, atomic batches, and legacy-data import with a retained rollback copy until confirmation.
+- **Local-only runtime:** transaction and profile features use the local database. The frontend has no runtime `fetch`/Axios calls. Android removes the Internet permission, disables cleartext traffic, and disables Android backup/device-transfer copying. The app CSP only permits same-origin connections.
+- **Named savings plans:** create a named target such as “Save for a plane ticket,” optional description and target date, edit the name/target, archive with confirmation, show saved/remaining/progress, and add a dated contribution or withdrawal with an optional personal note. Activity history is attached to its plan and updates from the saved ledger.
+- **Savings overview:** personal starter ideas, target progress, recent plan history, and an unallocated savings entry/report card.
+- **Versioned JSON backup:** exports profile, records, plans, contributions and supporting local data. Restore validates its structure before writing and asks the person to merge or replace. Restore operations use an atomic database batch.
+- **Responsive presentation:** refreshed workspace navigation, dashboard cards, mobile navigation, on-device status, and savings cards inspired by the supplied reference images.
+- **Capacitor Android workflow:** static Next.js export is packaged and synced into the Android project. SQL.js WASM is copied into the bundle before builds.
 
-Let a person create a plan such as **“Save for a plane ticket”**, **“New laptop”**, **“Emergency fund”**, or **“Weekend in Jaipur.”** A plan can include:
+### Still to build
 
-- Name and optional description or personal note.
-- Target amount and the currency in which the target is expressed.
-- Optional target date, start date, priority, and color/icon.
-- Starting amount, if the person has already saved toward it.
-- Optional reminder schedule, stored on-device and delivered through local notifications only.
-- Status: active, paused, completed, or archived.
+- Search is currently limited to descriptions/notes/type in the loaded recent/date-filtered records. Transaction editing covers description and amount; date, category/account and type filters, full history search, and richer edit fields remain.
+- User-created categories/accounts, transaction category assignment, and undo-delete beyond the current session are still needed.
+- Contribution edit and split/allocate actions for unallocated savings; current plan activity supports add, withdrawal, and delete.
+- User-defined categories and accounts, budgets, and recurring templates with explicit confirmation before creating entries.
+- Manual exchange-rate support and additional original-currency entry.
+- Encrypted backups, optional database encryption, app lock, privacy/erase screen, and storage-quota guidance.
+- Local reminders, complete accessibility audit, large-text/TalkBack checks, and device testing on a low/mid-range Android phone.
 
-The plan screen shows amount saved, amount remaining, percentage complete, deadline progress, and a simple history of contributions and withdrawals. Allow edits, pause/resume, mark complete, archive, and delete with confirmation. Never count ordinary income as a savings contribution automatically.
+## Delivery roadmap
 
-### 3. Make saving a first-class transaction
+### Phase 1 — Storage foundation and migration (implemented; device failure testing remains)
 
-- Add **Add to a plan** as a quick action. The person chooses a plan, enters an amount and date, and can add a note such as “tax refund” or “cash from this week.”
-- Save each contribution as its own dated record linked to one plan. It appears in the plan history and in general activity without being mistaken for an expense.
-- Allow withdrawals or corrections as separate, auditable records. Editing or deleting a contribution updates the plan total immediately.
-- Support unallocated savings for money set aside before the person chooses a plan; let them assign or split it later.
-- Make quick actions configurable, for example “Add my weekly ₹500 to the plane ticket plan.”
+- Ship SQLite schema and the shared web/Android query layer.
+- Migrate previous browser records atomically, verify counts, and keep the old copy until confirmation.
+- Show a retryable startup error if the local database cannot initialize.
+- **Done when:** fresh install and upgrade data are validated on web and Android, and forced quota/corrupt-database failures have an exercised recovery path.
 
-### 4. Improve everyday notebook capture
+### Phase 2 — Named savings plans and ledger (core delivered; allocation/edit gaps remain)
 
-- Add a single quick-entry sheet for expense, income, savings contribution, and transfer between personal accounts.
-- Make date, amount, description, category, account, and optional note easy to edit. Preserve the person’s chosen date and amount exactly.
-- Add user-created categories and accounts; suggest recent values locally without uploading them.
-- Add search and filters by text, date, category, account, type, and savings plan.
-- Add edit, duplicate, undo-delete, and recurring transaction templates. Recurring entries are local rules; only create entries after an on-device reminder or the person’s chosen confirmation policy.
+- Persist plans, targets, target dates, status, and contribution/withdrawal history.
+- Keep unallocated savings available; make contributions linked or explicitly unallocated.
+- Add contribution editing and split allocation from unallocated savings.
+- **Done when:** create/edit/archive, add/edit/delete, split, and history totals agree after restart and across restore.
 
-### 5. Personal finance views
+### Phase 3 — Notebook capture
 
-- Overview: current balance, income, spending, savings contributions, active plan progress, and recent activity.
-- Monthly notebook: income versus expenses, category totals, and comparison to prior months.
-- Savings view: plan cards sorted by priority or deadline, recently funded goals, and upcoming milestones.
-- Optional budgets: user-defined monthly category limits with on-device progress indicators.
-- Custom date ranges, accessible charts, and an activity list that works with large histories.
-- Keep summaries transparent: explain whether transfers and savings contributions affect each total to avoid double counting.
+- Add a unified quick-entry flow for income, expenses, contributions, and transfers.
+- Support local categories/accounts and assignment; extend current activity search, basic edit, duplicate, and short-lived undo to full date/category/account/type filters and durable history navigation.
+- Add recurring templates that require a local reminder or the person’s confirmation before a transaction is created.
+- **Done when:** any record across the full local history can be found and corrected locally, and no recurring template creates an entry silently.
 
-### 6. Fully offline presentation
+### Phase 4 — Views and budgets
 
-- Remove runtime currency-rate requests. Offer a chosen base currency per account and optional manually entered conversion rates with an “as of” date, or show original transaction currency without conversion.
-- Bundle fonts, icons, and illustrations required by the interface; do not load remote assets or scripts at runtime.
-- Ensure opening the app, recording, editing, search, charts, and exports work in airplane mode.
+- Expand overview/monthly summaries and category totals; add optional category budgets.
+- Label how transfers and savings affect each total to prevent double counting.
+- Paginate or virtualize long activity lists.
+- **Done when:** every total shown has a documented and consistent definition.
 
-### 7. Privacy, protection, and recovery
+### Phase 5 — Offline completeness
 
-- Offer optional app lock using Android biometrics/device credentials where available; don’t create a remote password account.
-- Consider local database encryption using a key protected by Android Keystore. Explain recovery tradeoffs before enabling it.
-- Add encrypted, versioned backups with a passphrase option, plus a clearly labeled plain JSON export for interoperability.
-- Add an on-device privacy page with storage location, backup status, export, restore, and **Erase all data** controls.
-- Before destructive changes, show what will be removed and provide an export option. Make erasure local and verifiable.
-- Use no analytics or crash reporting that transmits finance data. If diagnostics are ever proposed, require explicit opt-in and strip all personal and transaction content.
+- Keep all runtime assets bundled and keep the network request surface closed.
+- Add manual-rate/original-currency support if multi-currency is introduced.
+- **Done when:** an airplane-mode walkthrough covers launch, capture, plans, history, charts, export, and restore with zero external requests.
 
-### 8. Accessibility and polish
+### Phase 6 — Privacy and recovery
 
-- Support larger text, screen readers, strong focus states, contrast, and reduced motion.
-- Improve empty states with useful examples while keeping sample data separate from real records.
-- Add clear validation, save confirmation, undo, and offline indicators.
-- Test responsive layouts on small phones, tablets, and desktop browsers, including safe areas and Android keyboard behavior.
+- Offer plain JSON and passphrase-encrypted versioned backups; state that a lost passphrase makes that encrypted file unrecoverable.
+- Consider Android SQLCipher with keys protected by Android Keystore and optional biometric/device-credential app lock with a device credential fallback.
+- Add a privacy page explaining local storage, backup behavior, export, restore, and erase-all-data.
+- **Done when:** recovery tradeoffs are shown before enabling protection and restore never overwrites without explicit choice.
 
-## Suggested delivery order
+### Phase 7 — Accessibility and device polish
 
-1. Define privacy/data-flow rules and the versioned local schema.
-2. Build SQLite and browser storage adapters plus one-time migration from current localStorage.
-3. Deliver named savings plans and linked contribution history.
-4. Improve quick entry, editing, search, and undo.
-5. Add notebook summaries, categories, accounts, and optional budgets.
-6. Remove runtime network calls and improve local backup, app lock, and recovery.
-7. Finish accessibility, Android device checks, and user-facing privacy documentation.
+- Verify keyboard/focus, labels, contrast, reduced motion, TalkBack, 200% text scaling, safe areas, and Android keyboard behavior.
+- Test low/mid-range devices and large histories; establish measured cold-start and scrolling baselines.
+- **Done when:** every primary flow is usable at large text scale with screen reader navigation and no dead ends.
+
+## Risks and mitigations
+
+| Risk | Mitigation |
+|---|---|
+| Migration drops or duplicates rows | One transaction, strict ID/data validation, read/write count, keep old data until explicit confirmation. |
+| Browser storage is cleared or evicted | Encourage periodic explicit export; add quota/storage guidance in the privacy phase. |
+| Plain local database is accessed on an unlocked device | State current limits plainly; evaluate SQLCipher/app-lock protection before making stronger claims. |
+| Lost encrypted-backup passphrase | Explain unrecoverability before encryption is enabled; do not imply a reset exists. |
+| Biometric lockout traps the owner | Always offer device PIN/pattern fallback. |
+| A dependency adds a network call | Keep CSP and Android permissions restrictive; audit dependencies and verify with a packet capture. |
+| Large activity lists become slow | Date/account indexes already exist; add pagination/virtualization and device benchmarks. |
+
+## Verification checklist
+
+- Check for runtime network APIs and remote asset URLs in frontend source and built assets.
+- Walk through airplane-mode launch, income/expense creation, savings plan creation and contributions, charts, export, merge, and replace restore.
+- Migrate a synthetic old localStorage set, including invalid rows and duplicate IDs; verify failure preserves both old keys and current DB contents.
+- Round-trip JSON backup in merge and replace modes; corrupt input must not alter existing data.
+- Check Android manifest permissions, network policy, backup exclusion, and the packaged SQLite WASM asset.
+- On device, exercise storage-full/corrupt-database handling, TalkBack, 200% scaling, and large-history scrolling.
 
 ## Acceptance criteria
 
-- With network access disabled, a person can launch the app, create/edit/delete an expense, income record, plan, and contribution, view totals and history, and create a backup.
-- Inspecting app network traffic during normal use shows no transaction, plan, profile, preference, or diagnostic data leaving the device; ideally the app makes no runtime requests at all.
-- A contribution is linked to exactly one savings plan (or explicitly unallocated), appears in its history, and changes its progress and remaining amount correctly.
-- Upgrading from the existing localStorage version preserves existing income and expense records and reports the imported count.
-- Backup/restore is versioned, validated, and never silently overwrites data; merge versus replace is an explicit choice.
-- The app clearly explains local storage, export behavior, and what happens when app data is cleared or the phone is replaced.
+- A person can use core finance flows with the network disabled and without any backend dependency.
+- No transaction, plan, profile, preference, or diagnostic data leaves the device during ordinary use.
+- Each plan shows saved amount, remaining amount, progress, and a contribution/withdrawal history from its own records.
+- Legacy records survive migration, with a visible imported count and original data retained until confirmation.
+- Backup restore validates data and presents explicit merge/replace choices before changing local records.
+- Documentation clearly states where data is stored, what export does, and the limits of local encryption, device transfer, and app clearing.
