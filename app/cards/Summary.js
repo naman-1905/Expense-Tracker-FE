@@ -22,16 +22,8 @@ function Summary() {
       }
       setError(null);
       
-      const cachedData = localStorage.getItem('summaryData');
-      if (cachedData) {
-        setData(JSON.parse(cachedData));
-        setLoading(false);
-      }
-      
       const summaryData = await getSummaryData();
       setData(summaryData);
-      
-      localStorage.setItem('summaryData', JSON.stringify(summaryData));
       
       setIsInitialLoad(false);
     } catch (err) {
