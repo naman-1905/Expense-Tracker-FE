@@ -10,24 +10,9 @@ function FinanceOverview() {
   const chartInstance = useRef(null);
   const { formatAmount, convertFromINR, getCurrencySymbol } = useCurrency();
   
-  // Initialize from localStorage if available
-  const getCachedData = () => {
-    try {
-      if (typeof window === 'undefined') return null;
-      const cached = localStorage.getItem('financialOverviewData');
-      if (cached) {
-        return JSON.parse(cached);
-      }
-    } catch (err) {
-      console.error('Error reading from localStorage:', err);
-    }
-    return null;
-  };
-
-  const cachedData = getCachedData();
-  const [loading, setLoading] = useState(!cachedData);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [financialData, setFinancialData] = useState(cachedData || {
+  const [financialData, setFinancialData] = useState({
     totalIncome: 0,
     totalExpenses: 0,
     totalBalance: 0,
@@ -42,11 +27,6 @@ function FinanceOverview() {
       setFinancialData(summaryData);
       setLastUpdated(new Date());
       
-      try {
-        localStorage.setItem('financialOverviewData', JSON.stringify(summaryData));
-      } catch (err) {
-        console.error('Error saving to localStorage:', err);
-      }
     } catch (err) {
       setError(err.message || 'Failed to fetch financial data');
       console.error('Finance Overview fetch error:', err);
